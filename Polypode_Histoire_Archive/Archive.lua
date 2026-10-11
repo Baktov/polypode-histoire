@@ -1,0 +1,14 @@
+-- Polypode Histoire Archive: Archive — fichier de sauvegarde des mois exportés du journal
+
+-- Addon chargé à la demande (## LoadOnDemand) par le bouton « Exporter » de Polypode Histoire
+-- (Journal.lua, ns.Export) : il n'existe que pour porter la sauvegarde PolypodeHistoireArchive,
+-- jamais lue au lancement du jeu. Tant qu'il n'est pas chargé, le jeu ne réécrit pas son fichier
+-- (WTF\Account\<compte>\SavedVariables\Polypode_Histoire_Archive.lua) : seul le client qui exporte
+-- le met à jour, en ajoutant les mois exportés à ceux déjà archivés.
+--
+-- Format (le même que le journal, lisible par un logiciel tiers) :
+--   PolypodeHistoireArchive = {
+--     format = 1, updated = <heure serveur du dernier export>,
+--     days = { ["AAAA-MM-JJ"] = { "heure~nom-royaume~type~champ1~champ2...", ... } },
+--   }
+-- Types et champs : voir le README de Polypode Histoire, section « Format des données ».

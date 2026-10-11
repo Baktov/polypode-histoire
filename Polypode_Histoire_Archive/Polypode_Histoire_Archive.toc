@@ -1,0 +1,11 @@
+## Interface: 120000, 16001
+## Title: Polypode Histoire Archive
+## Notes: Archive du journal de Polypode Histoire (mois exportés). Chargée seulement au moment d'un export : laisser activée.
+## Author: Baktov
+## Version: 1.0.0
+## Dependencies: Polypode_Histoire
+## LoadOnDemand: 1
+## SavedVariables: PolypodeHistoireArchive
+## Category: Polypode
+
+Archive.lua
