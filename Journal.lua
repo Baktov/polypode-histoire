@@ -22,7 +22,9 @@ local P = Polypode -- dépendance obligatoire (## Dependencies: Polypode), charg
 --   mplus nom~niveau~àTemps(1/0)~améliorations  clé mythique+ terminée
 --   boss nom~difficulté~raid  boss de raid vaincu
 -- Messages : HIST:token:E:<événement> (nouvel événement), HIST:token:R:<événement> (retrait :
--- déconnexion annulée), HIST:token:P:<AAAA-MM-JJ> (export : jours antérieurs retirés).
+-- déconnexion annulée, déco-reco ou session courte : seulement de son personnage),
+-- HIST:token:D:<événement> (supprimé à la main, clic droit : de n'importe quel client de l'équipe),
+-- HIST:token:P:<AAAA-MM-JJ> (export : jours antérieurs retirés).
 
 local MESSAGE_TYPE = "HIST"
 local SEP = "~"
@@ -41,11 +43,12 @@ local seen = {} -- [événement] = true, index des doublons (construit au charge
 local sessionEvents = {} -- événements du personnage joué pendant la session (renvoyés aux clients qui s'annoncent)
 local size = 0 -- taille estimée du journal dans le fichier (octets)
 local count = 0 -- nombre d'événements
-local withdrawn = {} -- [événement] = true, retirés pendant la session (retrait renvoyé aux clients qui s'annoncent)
+local withdrawn = {} -- [événement] = "R" / "D", retirés pendant la session (renvoyés aux clients qui s'annoncent)
 local reloading -- /reload en cours : PLAYER_LOGOUT n'est pas une déconnexion
 local loginEvent, loginTime -- événement « in » de la session (nil si reconnexion rapide) et son heure
 local loggedOut -- déconnexion traitée par Logout / Quit (annulée par CancelLogout) : événement « out »
--- noté, ou "short" si la session était trop courte (connexion retirée, rien de noté)
+-- noté, "short" si la session était trop courte (connexion retirée, rien de noté), ou "skip" (idem,
+-- connexion déjà supprimée à la main)
 
 -- OUTILS ------------------------------------------------------------------------------------------
 
@@ -175,8 +178,18 @@ end
 -- s'annoncent ensuite).
 local function Withdraw(event)
 	Remove(event)
-	withdrawn[event] = true
+	withdrawn[event] = withdrawn[event] or "R"
 	Send("R", event)
+	Refresh()
+end
+
+-- Supprime des événements à la main (clic droit dans la fenêtre), ici et chez les clients connectés.
+function ns.Delete(list)
+	for _, event in ipairs(list) do
+		Remove(event)
+		withdrawn[event] = "D"
+		Send("D", event)
+	end
 	Refresh()
 end
 
@@ -207,6 +220,15 @@ local function OnMessage(rest, sender)
 		end
 		return
 	end
+	if kind == "D" then
+		-- Suppression à la main : de n'importe quel client de l'équipe (token vérifié).
+		if seen[payload] then
+			Remove(payload)
+			Refresh()
+		end
+		withdrawn[payload] = "D"
+		return
+	end
 	-- Événement : seulement celui du personnage qui l'envoie.
 	local _, key = Parse(payload)
 	if not key or not (P.IsSender and P.IsSender(sender, key)) then
@@ -231,8 +253,8 @@ local function OnPeer(sender)
 			Send("E", sessionEvents[i], sender)
 		end
 	end
-	for event in pairs(withdrawn) do
-		Send("R", event, sender)
+	for event, kind in pairs(withdrawn) do
+		Send(kind, event, sender)
 	end
 end
 
@@ -390,9 +412,12 @@ local function OnLogin()
 end
 
 -- Déconnexion : rien de noté si la connexion date de moins de SHORT_DELAY (elle est retirée) ;
--- renvoie l'événement « out » noté, ou "short".
+-- renvoie l'événement « out » noté, "short" ou "skip".
 local function OnLogout()
 	if loginEvent and GetServerTime() - loginTime < SHORT_DELAY then
+		if not seen[loginEvent] then
+			return "skip"
+		end
 		Withdraw(loginEvent)
 		return "short"
 	end
@@ -416,7 +441,7 @@ local function OnLogoutCancelled()
 			Send("E", loginEvent)
 			Refresh()
 		end
-	elseif loggedOut then
+	elseif loggedOut and loggedOut ~= "skip" then
 		Withdraw(loggedOut)
 	end
 	loggedOut = nil

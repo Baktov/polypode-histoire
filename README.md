@@ -47,6 +47,9 @@ Dans un jour, les événements sont dans l'ordre de l'heure :
 Le même événement vécu par plusieurs personnages à moins de 5 minutes d'écart tient sur **une
 ligne** ; **au survol**, l'heure exacte de chacun.
 
+**Clic droit** sur une ligne : la **supprimer** du journal, après confirmation (tous les
+personnages de la ligne), ici et sur les clients connectés.
+
 **Journal commun** : chaque personnage envoie ses événements aux autres clients connectés, et
 renvoie ceux de sa session à chaque client qui se connecte ; tous les clients tiennent donc le
 même journal. Une déconnexion est notée dès qu'on la demande (menu, `/logout`, `/quit`) et
@@ -101,5 +104,6 @@ personnage = `nom-royaume`, jour = date locale. Types et champs :
 
 ## Version
 
+`1.2.0` : clic droit sur une entrée pour la supprimer du journal (avec confirmation, synchronisé entre clients).
 `1.1.0` : déco-reco et sessions de moins de 3 minutes non notées dans le journal.
 `1.0.0` : première version : journal commun synchronisé entre clients (connexions, déconnexions, équipe groupée, gouffres, donjons, clés M+, boss de raid, hauts faits, niveaux, niveau d'objet), fenêtre Année > Mois > Jour repliable, événements de plusieurs personnages réunis, avertissement de taille et export vers l'archive Polypode Histoire Archive.

@@ -11,6 +11,7 @@ local P = Polypode
 -- réunis en une ligne (« Mordsith, Darà terminent le gouffre... ») dont l'infobulle donne le
 -- détail. En-tête : nombre d'événements et taille du journal (orange au-delà de ns.WARN_SIZE,
 -- rouge au-delà de ns.ALERT_SIZE) ; boutons « Tout replier » / « Tout déplier » et « Exporter ».
+-- Clic droit sur une ligne d'événement : la supprimer du journal, après confirmation.
 
 local MERGE_WINDOW = 300 -- secondes
 local MIN_WIDTH, MIN_HEIGHT = 420, 220
@@ -129,10 +130,11 @@ local function DayLines(list)
 		if line and not already and kind ~= "grp" and time - line.last <= MERGE_WINDOW then
 			line.keys[#line.keys + 1] = key
 			line.times[#line.times + 1] = time
+			line.events[#line.events + 1] = event
 			line.last = time
 		else
 			line = { event = true, kind = kind, fields = fields, time = time, last = time, keys = { key },
-				times = { time } }
+				times = { time }, events = { event } }
 			lines[#lines + 1] = line
 			open[mergeKey] = line
 		end
@@ -212,13 +214,38 @@ local function ItemTooltip(item)
 	for i, key in ipairs(item.keys) do
 		lines[#lines + 1] = { CharName(key), date("%H:%M:%S", item.times[i]) }
 	end
+	lines[#lines + 1] = "Clic droit : supprimer"
 	return lines
 end
 
-local function OnItemClick(item)
+-- SUPPRESSION -------------------------------------------------------------------------------------
+
+StaticPopupDialogs["POLYPODE_HISTOIRE_DELETE"] = {
+	text = "%s",
+	button1 = DELETE or "Supprimer",
+	button2 = CANCEL or "Annuler",
+	OnAccept = function(_, data)
+		ns.Delete(data)
+	end,
+	timeout = 0,
+	whileDead = true,
+	hideOnEscape = true,
+}
+
+local function AskDelete(item)
+	local count = #item.events
+	StaticPopup_Show("POLYPODE_HISTOIRE_DELETE", "Supprimer cette entrée du journal ?\n\n"
+		.. date("%d/%m/%Y %H:%M", item.time) .. "  " .. EventText(item) .. "\n\n"
+		.. (count > 1 and (count .. " événements (un par personnage) seront retirés") or "Elle sera retirée")
+		.. ", ici et sur les clients connectés.", nil, item.events)
+end
+
+local function OnItemClick(item, mouseButton)
 	if item.header then
 		Settings().open[item.key] = not IsOpen(item.key)
 		ns.Refresh()
+	elseif mouseButton == "RightButton" then
+		AskDelete(item)
 	end
 end
 
