@@ -50,7 +50,9 @@ ligne** ; **au survol**, l'heure exacte de chacun.
 **Journal commun** : chaque personnage envoie ses événements aux autres clients connectés, et
 renvoie ceux de sa session à chaque client qui se connecte ; tous les clients tiennent donc le
 même journal. Une déconnexion est notée dès qu'on la demande (menu, `/logout`, `/quit`) et
-retirée si elle est annulée ; `/reload` n'en est pas une.
+retirée si elle est annulée ; `/reload` n'en est pas une. Une **déco-reco de moins de 3 minutes**
+n'est pas notée (le personnage reste connecté dans le journal), ni une **session de moins de
+3 minutes** (connexion puis déconnexion).
 
 ### Taille du journal et export
 
@@ -99,4 +101,5 @@ personnage = `nom-royaume`, jour = date locale. Types et champs :
 
 ## Version
 
+`1.1.0` : déco-reco et sessions de moins de 3 minutes non notées dans le journal.
 `1.0.0` : première version : journal commun synchronisé entre clients (connexions, déconnexions, équipe groupée, gouffres, donjons, clés M+, boss de raid, hauts faits, niveaux, niveau d'objet), fenêtre Année > Mois > Jour repliable, événements de plusieurs personnages réunis, avertissement de taille et export vers l'archive Polypode Histoire Archive.

@@ -34,14 +34,18 @@ ns.ALERT_SIZE = 5 * 1024 * 1024 -- alerte (rouge)
 local SESSION_RESEND_MAX = 100 -- événements de la session renvoyés à un client qui s'annonce
 local GROUP_MERGE_DELAY = 2 -- secondes : regroupe les GROUP_ROSTER_UPDATE rapprochés
 local ILVL_DELAY = 3 -- secondes : regroupe les changements d'équipement
+local SHORT_DELAY = 180 -- secondes : déco-reco ou session plus courtes ne sont pas notées
 
 local store -- = PolypodeHistoireData : { format, days = { [jour] = { événements } }, ilvl = { [clé] = n }, cutoff }
 local seen = {} -- [événement] = true, index des doublons (construit au chargement)
 local sessionEvents = {} -- événements du personnage joué pendant la session (renvoyés aux clients qui s'annoncent)
 local size = 0 -- taille estimée du journal dans le fichier (octets)
 local count = 0 -- nombre d'événements
+local withdrawn = {} -- [événement] = true, retirés pendant la session (retrait renvoyé aux clients qui s'annoncent)
 local reloading -- /reload en cours : PLAYER_LOGOUT n'est pas une déconnexion
-local loggedOut -- événement « out » noté par Logout / Quit (retiré si la déconnexion est annulée)
+local loginEvent, loginTime -- événement « in » de la session (nil si reconnexion rapide) et son heure
+local loggedOut -- déconnexion traitée par Logout / Quit (annulée par CancelLogout) : événement « out »
+-- noté, ou "short" si la session était trop courte (connexion retirée, rien de noté)
 
 -- OUTILS ------------------------------------------------------------------------------------------
 
@@ -167,6 +171,15 @@ local function Record(kind, ...)
 	return event
 end
 
+-- Retire un événement du personnage joué, ici et chez les clients connectés (renvoyé à ceux qui
+-- s'annoncent ensuite).
+local function Withdraw(event)
+	Remove(event)
+	withdrawn[event] = true
+	Send("R", event)
+	Refresh()
+end
+
 -- Purge des jours antérieurs à cutoff (export, ici ou sur un autre client).
 local function ApplyCutoff(cutoff)
 	if not cutoff or (store.cutoff and store.cutoff >= cutoff) then
@@ -217,6 +230,9 @@ local function OnPeer(sender)
 		if seen[sessionEvents[i]] then
 			Send("E", sessionEvents[i], sender)
 		end
+	end
+	for event in pairs(withdrawn) do
+		Send("R", event, sender)
 	end
 end
 
@@ -350,22 +366,60 @@ local function OnChallengeCompleted()
 		info.keystoneUpgradeLevels or 0)
 end
 
+-- Connexion : pas notée si le personnage s'est déconnecté il y a moins de SHORT_DELAY (sa
+-- déconnexion est alors retirée : le journal le montre connecté sans interruption).
+local function OnLogin()
+	local now, key = GetServerTime(), P.GetCharKey()
+	local last
+	for _, day in ipairs({ DayOf(now), DayOf(now - SHORT_DELAY) }) do
+		local list = store.days[day] or {}
+		for i = #list, 1, -1 do
+			local time, eventKey = Parse(list[i])
+			if eventKey == key and (not last or time > last.time) then
+				last = { time = time, event = list[i] }
+				break
+			end
+		end
+	end
+	if last and select(3, Parse(last.event)) == "out" and now - last.time < SHORT_DELAY then
+		Withdraw(last.event)
+		loginEvent = nil
+	else
+		loginEvent, loginTime = Record("in"), now
+	end
+end
+
+-- Déconnexion : rien de noté si la connexion date de moins de SHORT_DELAY (elle est retirée) ;
+-- renvoie l'événement « out » noté, ou "short".
+local function OnLogout()
+	if loginEvent and GetServerTime() - loginTime < SHORT_DELAY then
+		Withdraw(loginEvent)
+		return "short"
+	end
+	return Record("out")
+end
+
 -- Déconnexion : notée et envoyée dès la demande (Logout / Quit, avant que le client se ferme),
 -- retirée si elle est annulée (CancelLogout) ; sinon notée à PLAYER_LOGOUT (fermeture de la
 -- fenêtre), sans envoi possible. /reload n'est pas une déconnexion.
 local function OnLogoutRequested()
 	if not loggedOut and store then
-		loggedOut = Record("out")
+		loggedOut = OnLogout()
 	end
 end
 
 local function OnLogoutCancelled()
-	if loggedOut then
-		Remove(loggedOut)
-		Send("R", loggedOut)
-		loggedOut = nil
-		Refresh()
+	if loggedOut == "short" then
+		-- Session courte : la connexion retirée est remise.
+		withdrawn[loginEvent] = nil
+		if Insert(loginEvent) then
+			Send("E", loginEvent)
+			Refresh()
+		end
+	elseif loggedOut then
+		Withdraw(loggedOut)
 	end
+	loggedOut = nil
 end
 
 -- EXPORT ------------------------------------------------------------------------------------------
@@ -489,7 +543,7 @@ events:SetScript("OnEvent", function(_, event, ...)
 	if event == "PLAYER_ENTERING_WORLD" then
 		local isLogin = ...
 		if isLogin then
-			Record("in")
+			OnLogin()
 			if size >= ns.WARN_SIZE then
 				C_Timer.After(10, function()
 					UIErrorsFrame:AddMessage(string.format("Polypode Histoire : journal de %.1f Mo, pensez à "
@@ -501,7 +555,7 @@ events:SetScript("OnEvent", function(_, event, ...)
 		C_Timer.After(ILVL_DELAY, CheckItemLevel)
 	elseif event == "PLAYER_LOGOUT" then
 		if not reloading and not loggedOut then
-			Record("out")
+			OnLogout()
 		end
 	elseif event == "PLAYER_LEVEL_UP" then
 		Record("lvl", (...))
