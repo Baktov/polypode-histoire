@@ -32,7 +32,9 @@ tout l'arbre. Le nombre d'événements est indiqué à droite de chaque année, 
 
 Les jours de **sortie d'un patch** (date des serveurs européens) sont signalés **en vert** à droite
 du jour, avec le nom du patch (« Mercredi 14 octobre  Patch 12.1.5 « La Promesse de demain » »),
-même sans événement ce jour-là, dans les mois affichés (Retail seulement).
+même sans événement ce jour-là, dans les mois affichés ; un patch annoncé à venir est toujours
+affiché, marqué « (à venir) » (Retail seulement). Case **Ext** à droite du titre : afficher ou
+non ces jours de patchs et d'extensions (cochée par défaut).
 
 **Filtres** (cases à gauche de la barre de titre, libellés abrégés, nom complet au survol) :
 **Con.** connexions, **H-F** hauts faits, **Gou.** gouffres, **Don.** donjons (avec les clés M+) et
@@ -121,6 +123,7 @@ personnage = `nom-royaume`, jour = date locale. Types et champs :
 
 ## Version
 
+`1.7.0` : patchs annoncés à venir affichés (« à venir ») ; case « Ext » à droite du titre pour afficher ou masquer les jours de patchs et d'extensions.
 `1.6.0` : jours de sortie des patchs (Midnight) en vert avec leur nom, dans les mois affichés.
 `1.5.1` : filtres : libellés abrégés (Con., H-F, Gou., Don., Rai.), nom complet dans l'infobulle ; fenêtre moins large possible.
 `1.5.0` : filtres dans la barre de titre (connexions, hauts faits, gouffres, donjons, raids) ; aucun coché = tout le journal.

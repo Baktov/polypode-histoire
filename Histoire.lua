@@ -21,7 +21,7 @@ local MERGE_WINDOW = 300 -- secondes
 -- les personnages d'une même ligne.
 local DURATION_FIELD = { delve = 7, dng = 6, mplus = 8, boss = 7 }
 local INSTANCE_KINDS = { delve = "le gouffre", party = "le donjon", raid = "le raid" }
-local MIN_WIDTH, MIN_HEIGHT = 460, 220
+local MIN_WIDTH, MIN_HEIGHT = 500, 220
 -- Filtres de la barre de titre : clé, libellé de l'infobulle, abrégé à droite de la case, description.
 local FILTERS = {
 	{ key = "conn", label = "Connexions", short = "Con.", tip = "Connexions et déconnexions (avec le temps joué)." },
@@ -34,8 +34,10 @@ local CATEGORY_OF_KIND = { ["in"] = "conn", out = "conn", ach = "ach", delve = "
 	mplus = "dungeon", boss = "raid" }
 local CATEGORY_OF_ENTRY = { delve = "delve", party = "dungeon", raid = "raid" }
 -- Sorties de patchs (Retail, date des serveurs européens : le mercredi), écrites en vert dans
--- l'en-tête du jour, pour les mois affichés. **À compléter à chaque patch** (date de Mamytwink /
--- Wowhead, nom officiel français s'il y en a un).
+-- l'en-tête du jour, pour les mois affichés et, à venir, toujours (case « Ext » de la barre de
+-- titre, PolypodeHistoireDB.showPatches). **À compléter à chaque patch**, dès sa date officielle
+-- (Mamytwink / Wowhead, nom officiel français s'il y en a un) ; 12.1.7 « Échos du Noyau-monde » :
+-- pas encore daté au 16/10/2026.
 local PATCHES = {
 	["2026-01-21"] = "Patch 12.0.0 (pré-patch de Midnight)",
 	["2026-02-11"] = "Patch 12.0.1",
@@ -59,6 +61,9 @@ local function Settings()
 	PolypodeHistoireDB = PolypodeHistoireDB or {}
 	PolypodeHistoireDB.open = PolypodeHistoireDB.open or {}
 	PolypodeHistoireDB.filters = PolypodeHistoireDB.filters or {}
+	if PolypodeHistoireDB.showPatches == nil then
+		PolypodeHistoireDB.showPatches = true
+	end
 	return PolypodeHistoireDB
 end
 
@@ -102,7 +107,7 @@ local function IsOpen(key)
 		return open
 	end
 	local today = ns.DayOf(GetServerTime())
-	return today:sub(1, #key) == key
+	return key >= today:sub(1, #key) -- période en cours, ou à venir (patch annoncé)
 end
 
 -- TEXTES ------------------------------------------------------------------------------------------
@@ -305,9 +310,11 @@ local function BuildItems()
 		totals[day:sub(1, 4)] = (totals[day:sub(1, 4)] or 0) + n
 		totals[day:sub(1, 7)] = (totals[day:sub(1, 7)] or 0) + n
 	end
-	-- Jours de sortie d'un patch dans un mois affiché, même sans événement.
-	for day in pairs(IS_RETAIL and PATCHES or {}) do
-		if totals[day:sub(1, 7)] and #(lists[day] or {}) == 0 then
+	-- Jours de sortie d'un patch dans un mois affiché, ou à venir, même sans événement.
+	local today = ns.DayOf(GetServerTime())
+	local patches = IS_RETAIL and Settings().showPatches and PATCHES or {}
+	for day in pairs(patches) do
+		if (totals[day:sub(1, 7)] or day > today) and #(lists[day] or {}) == 0 then
 			lists[day] = {}
 			days[#days + 1] = day
 		end
@@ -321,13 +328,13 @@ local function BuildItems()
 	for _, day in ipairs(days) do
 		if day:sub(1, 4) ~= year then
 			year, month = day:sub(1, 4), nil
-			items[#items + 1] = { header = 1, key = year, label = year, count = totals[year] }
+			items[#items + 1] = { header = 1, key = year, label = year, count = totals[year] or 0 }
 		end
 		if IsOpen(year) then
 			if day:sub(1, 7) ~= month then
 				month = day:sub(1, 7)
 				items[#items + 1] = { header = 2, key = month, label = MONTHS[tonumber(day:sub(6, 7))] .. " " .. year,
-					count = totals[month] }
+					count = totals[month] or 0 }
 			end
 			if IsOpen(month) then
 				local t = time({ year = tonumber(year), month = tonumber(day:sub(6, 7)), day = tonumber(day:sub(9, 10)),
@@ -335,7 +342,7 @@ local function BuildItems()
 				local list = lists[day]
 				items[#items + 1] = { header = 3, key = day,
 					label = WEEKDAYS[tonumber(date("%w", t)) + 1] .. " " .. tonumber(day:sub(9, 10)) .. " "
-						.. MONTHS[tonumber(day:sub(6, 7))]:lower(), count = #list, patch = IS_RETAIL and PATCHES[day] or nil }
+						.. MONTHS[tonumber(day:sub(6, 7))]:lower(), count = #list, patch = patches[day] }
 				if IsOpen(day) then
 					for _, line in ipairs(DayLines(list, durations)) do
 						items[#items + 1] = line
@@ -356,12 +363,13 @@ local function FormatItem(item)
 		if item.header == 3 and item.count == 0 then
 			mark = " " -- jour de patch sans événement : rien à déplier
 		end
+		local isFuture = item.header == 3 and item.key > ns.DayOf(GetServerTime())
 		local text = INDENT[item.header] .. "|cff999999" .. mark .. "|r " .. color .. item.label .. "|r"
 		if item.count > 0 then
 			text = text .. "  |cff999999(" .. item.count .. ")|r"
 		end
 		if item.patch then
-			text = text .. "  " .. PATCH_COLOR .. item.patch .. "|r"
+			text = text .. "  " .. PATCH_COLOR .. item.patch .. (isFuture and " (à venir)" or "") .. "|r"
 		end
 		return text
 	end
@@ -519,8 +527,43 @@ local function Build()
 	frame.CloseButton = closeBtn
 
 	-- Filtres : cases à gauche de la barre de titre ; le titre, à droite, contre la croix.
+	-- Case « Ext » (sorties des patchs et extensions) entre le titre et la croix.
+	local patchCheck = CreateFrame("CheckButton", nil, frame, "UICheckButtonTemplate")
+	patchCheck:SetSize(22, 22)
+	patchCheck:SetChecked(settings.showPatches)
+	patchCheck:SetScript("OnClick", function(self)
+		Settings().showPatches = self:GetChecked() and true or false
+		ns.Refresh()
+	end)
+	patchCheck:SetScript("OnEnter", function(self)
+		GameTooltip:SetOwner(self, "ANCHOR_BOTTOM")
+		GameTooltip:AddLine("Extensions et patchs")
+		GameTooltip:AddLine("Cochée : les jours de sortie des patchs et des extensions sont écrits en vert avec "
+			.. "leur nom (date des serveurs européens), dans les mois affichés, et ceux annoncés à venir.", 1, 1, 1, true)
+		if not IS_RETAIL then
+			GameTooltip:AddLine("Retail seulement.", 1, 0.25, 0.25, true)
+		end
+		ShowTooltip()
+	end)
+	patchCheck:SetScript("OnLeave", GameTooltip_Hide)
+	if P.SkinCheckBox then
+		P.SkinCheckBox(patchCheck)
+	end
+	local patchText = patchCheck.Text or patchCheck.text
+	if patchText then
+		patchText:SetText("Ext")
+		patchText:SetFontObject("GameFontHighlightSmall")
+		patchText:ClearAllPoints()
+		patchText:SetPoint("RIGHT", closeBtn, "LEFT", -4, 0)
+		patchCheck:SetPoint("RIGHT", patchText, "LEFT", -3, 0)
+		patchCheck:SetHitRectInsets(0, -(patchText:GetStringWidth() + 3), 0, 0)
+	else
+		patchCheck:SetPoint("RIGHT", closeBtn, "LEFT", -4, 0)
+	end
+	frame.patchCheck = patchCheck
+
 	local title = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-	title:SetPoint("RIGHT", closeBtn, "LEFT", -6, 0)
+	title:SetPoint("RIGHT", patchCheck, "LEFT", -8, 0)
 	title:SetText("Histoire")
 	frame.TitleText = title
 	frame.filterChecks = {}
