@@ -33,10 +33,10 @@ tout l'arbre. Le nombre d'événements est indiqué à droite de chaque année, 
 Les jours de **sortie d'un patch** (date des serveurs européens) sont signalés **en vert** à droite
 du jour, avec le nom du patch (« Mercredi 14 octobre  Patch 12.1.5 « La Promesse de demain » »),
 même sans événement ce jour-là, dans les mois affichés ; un patch annoncé à venir est toujours
-affiché, marqué « (à venir) » (Retail seulement). Case **Ext** à droite du titre : afficher ou
+affiché, marqué « (à venir) » (Retail seulement). Case **Ext** en bas à droite de la fenêtre : afficher ou
 non ces jours de patchs et d'extensions (cochée par défaut).
 
-**Filtres** (cases à gauche de la barre de titre, libellés abrégés, nom complet au survol) :
+**Filtres** (cases en bas à gauche de la fenêtre, libellés abrégés, nom complet au survol) :
 **Con.** connexions, **H-F** hauts faits, **Gou.** gouffres, **Don.** donjons (avec les clés M+),
 **Rai.** raids (entrées comprises), **Col.** collections (jouets, montures, mascottes), **Rép.**
 renom et réputation et **Soc.** social (amis, guildes, communautés). Aucune case cochée (par défaut) :
@@ -135,6 +135,7 @@ personnage = `nom-royaume`, jour = date locale. Types et champs :
 
 ## Version
 
+`1.9.1` : cases de filtre et case « Ext » déplacées en bas de la fenêtre ; titre de nouveau centré.
 `1.9.0` : social : amis (du personnage et Battle.net) ajoutés ou retirés, guildes et communautés rejointes ou quittées ; filtre « Soc. ».
 `1.8.0` : jouets, montures et mascottes obtenus ; paliers de renom et rangs de réputation atteints ; filtres « Col. » et « Rép. ». Nouveau fichier de sauvegarde par personnage (`PolypodeHistoireChar`) : redémarrer le jeu (un /reload ne suffit pas).
 `1.7.0` : patchs annoncés à venir affichés (« à venir ») ; case « Ext » à droite du titre pour afficher ou masquer les jours de patchs et d'extensions.

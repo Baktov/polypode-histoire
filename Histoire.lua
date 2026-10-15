@@ -12,7 +12,7 @@ local P = Polypode
 -- détail. En-tête : nombre d'événements et taille du journal (orange au-delà de ns.WARN_SIZE,
 -- rouge au-delà de ns.ALERT_SIZE) ; boutons « Tout replier » / « Tout déplier » et « Exporter ».
 -- Clic droit sur une ligne d'événement : la supprimer du journal, après confirmation.
--- FILTRES (cases à gauche de la barre de titre, PolypodeHistoireDB.filters) : aucune cochée = tout
+-- FILTRES (cases en bas à gauche de la fenêtre, PolypodeHistoireDB.filters) : aucune cochée = tout
 -- le journal ; sinon seuls les événements des catégories cochées (FILTERS, EventCategory), les
 -- jours, mois et années sans événement retenu étant omis.
 
@@ -21,8 +21,8 @@ local MERGE_WINDOW = 300 -- secondes
 -- les personnages d'une même ligne.
 local DURATION_FIELD = { delve = 7, dng = 6, mplus = 8, boss = 7 }
 local INSTANCE_KINDS = { delve = "le gouffre", party = "le donjon", raid = "le raid" }
-local MIN_WIDTH, MIN_HEIGHT = 640, 220
--- Filtres de la barre de titre : clé, libellé de l'infobulle, abrégé à droite de la case, description.
+local MIN_WIDTH, MIN_HEIGHT = 560, 220
+-- Filtres (bas de la fenêtre) : clé, libellé de l'infobulle, abrégé à droite de la case, description.
 local FILTERS = {
 	{ key = "conn", label = "Connexions", short = "Con.", tip = "Connexions et déconnexions (avec le temps joué)." },
 	{ key = "ach", label = "Hauts faits", short = "H-F", tip = "Hauts faits obtenus." },
@@ -40,8 +40,8 @@ local CATEGORY_OF_KIND = { ["in"] = "conn", out = "conn", ach = "ach", delve = "
 	friend = "social", guild = "social", club = "social" }
 local CATEGORY_OF_ENTRY = { delve = "delve", party = "dungeon", raid = "raid" }
 -- Sorties de patchs (Retail, date des serveurs européens : le mercredi), écrites en vert dans
--- l'en-tête du jour, pour les mois affichés et, à venir, toujours (case « Ext » de la barre de
--- titre, PolypodeHistoireDB.showPatches). **À compléter à chaque patch**, dès sa date officielle
+-- l'en-tête du jour, pour les mois affichés et, à venir, toujours (case « Ext » en bas à droite de
+-- la fenêtre, PolypodeHistoireDB.showPatches). **À compléter à chaque patch**, dès sa date officielle
 -- (Mamytwink / Wowhead, nom officiel français s'il y en a un) ; 12.1.7 « Échos du Noyau-monde » :
 -- pas encore daté au 16/10/2026.
 local PATCHES = {
@@ -546,7 +546,7 @@ end
 local function Build()
 	local settings = Settings()
 	frame = CreateFrame("Frame", "PolypodeHistoireFrame", UIParent, "BackdropTemplate")
-	frame:SetSize(math.max(settings.width or 680, MIN_WIDTH), math.max(settings.height or 420, MIN_HEIGHT))
+	frame:SetSize(math.max(settings.width or 620, MIN_WIDTH), math.max(settings.height or 420, MIN_HEIGHT))
 	frame:SetPoint("CENTER")
 	frame:SetFrameStrata("DIALOG")
 	frame:SetMovable(true)
@@ -573,8 +573,8 @@ local function Build()
 	closeBtn:SetPoint("TOPRIGHT", -4, -4)
 	frame.CloseButton = closeBtn
 
-	-- Filtres : cases à gauche de la barre de titre ; le titre, à droite, contre la croix.
-	-- Case « Ext » (sorties des patchs et extensions) entre le titre et la croix.
+	-- Bas de la fenêtre : cases de filtre à gauche, case « Ext » (sorties des patchs et extensions) à
+	-- droite, contre la poignée de redimensionnement ; titre centré dans la barre de titre.
 	local patchCheck = CreateFrame("CheckButton", nil, frame, "UICheckButtonTemplate")
 	patchCheck:SetSize(22, 22)
 	patchCheck:SetChecked(settings.showPatches)
@@ -583,7 +583,7 @@ local function Build()
 		ns.Refresh()
 	end)
 	patchCheck:SetScript("OnEnter", function(self)
-		GameTooltip:SetOwner(self, "ANCHOR_BOTTOM")
+		GameTooltip:SetOwner(self, "ANCHOR_TOP")
 		GameTooltip:AddLine("Extensions et patchs")
 		GameTooltip:AddLine("Cochée : les jours de sortie des patchs et des extensions sont écrits en vert avec "
 			.. "leur nom (date des serveurs européens), dans les mois affichés, et ceux annoncés à venir.", 1, 1, 1, true)
@@ -601,16 +601,16 @@ local function Build()
 		patchText:SetText("Ext")
 		patchText:SetFontObject("GameFontHighlightSmall")
 		patchText:ClearAllPoints()
-		patchText:SetPoint("RIGHT", closeBtn, "LEFT", -4, 0)
+		patchText:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -24, 13)
 		patchCheck:SetPoint("RIGHT", patchText, "LEFT", -3, 0)
 		patchCheck:SetHitRectInsets(0, -(patchText:GetStringWidth() + 3), 0, 0)
 	else
-		patchCheck:SetPoint("RIGHT", closeBtn, "LEFT", -4, 0)
+		patchCheck:SetPoint("BOTTOMRIGHT", -24, 8)
 	end
 	frame.patchCheck = patchCheck
 
 	local title = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-	title:SetPoint("RIGHT", patchCheck, "LEFT", -8, 0)
+	title:SetPoint("TOP", 0, -14)
 	title:SetText("Histoire")
 	frame.TitleText = title
 	frame.filterChecks = {}
@@ -621,7 +621,7 @@ local function Build()
 		if previous then
 			check:SetPoint("LEFT", previous, "RIGHT", 8, 0)
 		else
-			check:SetPoint("TOPLEFT", 10, -8)
+			check:SetPoint("BOTTOMLEFT", 10, 8)
 		end
 		check:SetChecked(settings.filters[filter.key] == true)
 		check:SetScript("OnClick", function(self)
@@ -629,7 +629,7 @@ local function Build()
 			ns.Refresh()
 		end)
 		check:SetScript("OnEnter", function(self)
-			GameTooltip:SetOwner(self, "ANCHOR_BOTTOM")
+			GameTooltip:SetOwner(self, "ANCHOR_TOP")
 			GameTooltip:AddLine(filter.label)
 			GameTooltip:AddLine(filter.tip, 1, 1, 1, true)
 			GameTooltip:AddLine("Cochée : n'affiche que ces événements (avec les autres cases cochées). Aucune "
@@ -657,7 +657,7 @@ local function Build()
 
 	listPanel = P.CreatePanel(frame, "")
 	listPanel:SetPoint("TOPLEFT", 12, -36)
-	listPanel:SetPoint("BOTTOMRIGHT", -12, 12)
+	listPanel:SetPoint("BOTTOMRIGHT", -12, 34)
 	P.CreateScrollList(listPanel, FormatItem, nil, { onClick = OnItemClick, tooltip = ItemTooltip })
 
 	-- Boutons à droite de l'en-tête du panneau : « Exporter », puis « Tout replier / déplier ».
