@@ -21,7 +21,7 @@ local MERGE_WINDOW = 300 -- secondes
 -- les personnages d'une même ligne.
 local DURATION_FIELD = { delve = 7, dng = 6, mplus = 8, boss = 7 }
 local INSTANCE_KINDS = { delve = "le gouffre", party = "le donjon", raid = "le raid" }
-local MIN_WIDTH, MIN_HEIGHT = 580, 220
+local MIN_WIDTH, MIN_HEIGHT = 640, 220
 -- Filtres de la barre de titre : clé, libellé de l'infobulle, abrégé à droite de la case, description.
 local FILTERS = {
 	{ key = "conn", label = "Connexions", short = "Con.", tip = "Connexions et déconnexions (avec le temps joué)." },
@@ -32,9 +32,12 @@ local FILTERS = {
 	{ key = "coll", label = "Collections", short = "Col.", tip = "Jouets, montures et mascottes obtenus." },
 	{ key = "rep", label = "Renom et réputation", short = "Rép.", tip = "Paliers de renom et rangs de réputation "
 		.. "atteints (amitié comprise)." },
+	{ key = "social", label = "Social", short = "Soc.", tip = "Amis (du personnage ou Battle.net) ajoutés ou "
+		.. "retirés, guildes et communautés rejointes ou quittées." },
 }
 local CATEGORY_OF_KIND = { ["in"] = "conn", out = "conn", ach = "ach", delve = "delve", dng = "dungeon",
-	mplus = "dungeon", boss = "raid", toy = "coll", mount = "coll", pet = "coll", renown = "rep", rep = "rep" }
+	mplus = "dungeon", boss = "raid", toy = "coll", mount = "coll", pet = "coll", renown = "rep", rep = "rep",
+	friend = "social", guild = "social", club = "social" }
 local CATEGORY_OF_ENTRY = { delve = "delve", party = "dungeon", raid = "raid" }
 -- Sorties de patchs (Retail, date des serveurs européens : le mercredi), écrites en vert dans
 -- l'en-tête du jour, pour les mois affichés et, à venir, toujours (case « Ext » de la barre de
@@ -254,6 +257,24 @@ local function EventText(line)
 		local noun = kind == "toy" and "le jouet" or (kind == "mount" and "la monture" or "la mascotte")
 		local name = f[5] and f[5] ~= "" and f[5] or CollectionName(kind, f[4]) or ("n° " .. tostring(f[4]))
 		return who .. " " .. verb("obtient", "obtiennent") .. " " .. noun .. " " .. Quoted(name)
+	elseif kind == "friend" then
+		local added = f[5] == "+"
+		if f[6] == "b" then
+			-- Ami Battle.net : commun au compte, sans nom de personnage (détail dans l'infobulle).
+			return "|cff82c5ffAmi Battle.net " .. (added and "ajouté" or "retiré") .. "|r : " .. Quoted(f[4])
+		end
+		return who .. " " .. (added and verb("ajoute", "ajoutent") .. " " .. Quoted(f[4]) .. " à ses amis"
+			or verb("retire", "retirent") .. " " .. Quoted(f[4]) .. " de ses amis")
+	elseif kind == "guild" then
+		return who .. " " .. (f[5] == "+" and verb("rejoint", "rejoignent") or verb("quitte", "quittent"))
+			.. " la guilde " .. Quoted(f[4])
+	elseif kind == "club" then
+		local added = f[5] == "+"
+		if f[6] == "b" then
+			return "|cff82c5ffCommunauté Battle.net " .. (added and "rejointe" or "quittée") .. "|r : " .. Quoted(f[4])
+		end
+		return who .. " " .. (added and verb("rejoint", "rejoignent") or verb("quitte", "quittent"))
+			.. " la communauté " .. Quoted(f[4])
 	elseif kind == "renown" then
 		return who .. " " .. verb("atteint", "atteignent") .. " le |cffffd200renom " .. (f[5] or "?") .. "|r auprès de "
 			.. Quoted(f[6] ~= "" and f[6] or "?")
@@ -525,7 +546,7 @@ end
 local function Build()
 	local settings = Settings()
 	frame = CreateFrame("Frame", "PolypodeHistoireFrame", UIParent, "BackdropTemplate")
-	frame:SetSize(math.max(settings.width or 620, MIN_WIDTH), math.max(settings.height or 420, MIN_HEIGHT))
+	frame:SetSize(math.max(settings.width or 680, MIN_WIDTH), math.max(settings.height or 420, MIN_HEIGHT))
 	frame:SetPoint("CENTER")
 	frame:SetFrameStrata("DIALOG")
 	frame:SetMovable(true)

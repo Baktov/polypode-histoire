@@ -29,6 +29,10 @@ local P = Polypode -- dépendance obligatoire (## Dependencies: Polypode), charg
 --   renown id~niveau~faction  palier de renom atteint (faction majeure)
 --   rep  id~rang~faction~niveau  rang de réputation atteint (rang = texte du jeu : « Révéré », rang
 --                     d'amitié… ; niveau = numéro du rang), noté seulement en montant
+--   friend nom~+/-~c/b  ami ajouté (+) ou retiré (-) : c = ami du personnage, b = ami Battle.net (BattleTag
+--                     sans son numéro)
+--   guild nom~+/-     guilde rejointe ou quittée
+--   club nom~+/-~c/b  communauté rejointe ou quittée (c = de personnage, b = Battle.net)
 --   durée : secondes depuis l'entrée, ou depuis le précédent gouffre / donjon / boss terminé dans la
 --   même instance (clé M+ : temps du chrono) ; vide si inconnue (absente des anciens événements).
 -- Messages : HIST:token:E:<événement> (nouvel événement), HIST:token:R:<événement> (retrait :
@@ -786,6 +790,160 @@ local function SeedReputations()
 	end
 end
 
+-- SOCIAL ------------------------------------------------------------------------------------------
+
+-- Amis, guilde et communautés du personnage joué, comparés à ceux gardés dans PolypodeHistoireChar
+-- (friends, bnet, guild, clubs) : chaque écart est noté. Rien n'est comparé avant SOCIAL_DELAY
+-- après la connexion (listes encore incomplètes) ; un premier relevé sans référence n'en sert que.
+local SOCIAL_DELAY = 10
+local socialReady, socialPending
+
+local function CharStore()
+	PolypodeHistoireChar = PolypodeHistoireChar or {}
+	return PolypodeHistoireChar
+end
+
+-- Ensembles { [nom] = true } (nil si la liste n'est pas lisible) ; clubs : { [id] = { name, b } }.
+local function ReadFriends()
+	if not (C_FriendList and C_FriendList.GetNumFriends and C_FriendList.GetFriendInfoByIndex) then
+		return nil
+	end
+	local set = {}
+	for i = 1, C_FriendList.GetNumFriends() or 0 do
+		local info = C_FriendList.GetFriendInfoByIndex(i)
+		local name = info and info.name
+		if name and not Secret(name) and name ~= "" then
+			set[name] = true
+		end
+	end
+	return set
+end
+
+local function ReadBNetFriends()
+	if not (BNGetNumFriends and C_BattleNet and C_BattleNet.GetFriendAccountInfo) then
+		return nil
+	end
+	local set = {}
+	for i = 1, (BNGetNumFriends()) or 0 do
+		local info = C_BattleNet.GetFriendAccountInfo(i)
+		local tag = info and info.battleTag
+		if tag and not Secret(tag) and tag ~= "" then
+			set[(tag:gsub("#%d+$", ""))] = true
+		end
+	end
+	return set
+end
+
+local function ReadGuild()
+	if not IsInGuild then
+		return nil
+	end
+	if not IsInGuild() then
+		return ""
+	end
+	local name = GetGuildInfo("player")
+	if name and not Secret(name) then
+		return name
+	end
+	return nil -- dans une guilde dont le nom n'est pas encore connu
+end
+
+local function ReadClubs()
+	if not (C_Club and C_Club.GetSubscribedClubs) then
+		return nil
+	end
+	local guildType = Enum and Enum.ClubType and Enum.ClubType.Guild or 2
+	local bnetType = Enum and Enum.ClubType and Enum.ClubType.BattleNet or 0
+	local clubs = {}
+	for _, info in ipairs(C_Club.GetSubscribedClubs() or {}) do
+		if info.clubId and info.clubType ~= guildType and info.name and not Secret(info.name) then
+			clubs[tostring(info.clubId)] = { name = info.name, b = info.clubType == bnetType }
+		end
+	end
+	return clubs
+end
+
+-- Écarts entre deux ensembles : ajoutés (+) puis retirés (-).
+local function DiffSets(old, new, record)
+	for name in pairs(new) do
+		if not old[name] then
+			record(name, "+")
+		end
+	end
+	for name in pairs(old) do
+		if not new[name] then
+			record(name, "-")
+		end
+	end
+end
+
+-- Liste vide alors que la référence ne l'était pas : sans doute pas encore chargée, on attend
+-- (retirer d'un coup tous ses amis ou toutes ses communautés n'est donc pas noté).
+local function Usable(new, old)
+	return new and not (next(new) == nil and old and next(old) ~= nil)
+end
+
+local function CheckSocial()
+	socialPending = nil
+	if not socialReady or not store then
+		return
+	end
+	local char = CharStore()
+	local friends = ReadFriends()
+	if Usable(friends, char.friends) then
+		if char.friends then
+			DiffSets(char.friends, friends, function(name, sign)
+				Record("friend", name, sign, "c")
+			end)
+		end
+		char.friends = friends
+	end
+	local bnet = ReadBNetFriends()
+	if Usable(bnet, char.bnet) then
+		if char.bnet then
+			DiffSets(char.bnet, bnet, function(name, sign)
+				Record("friend", name, sign, "b")
+			end)
+		end
+		char.bnet = bnet
+	end
+	local guild = ReadGuild()
+	if guild then
+		if char.guild and char.guild ~= guild then
+			if char.guild ~= "" then
+				Record("guild", char.guild, "-")
+			end
+			if guild ~= "" then
+				Record("guild", guild, "+")
+			end
+		end
+		char.guild = guild
+	end
+	local clubs = ReadClubs()
+	if Usable(clubs, char.clubs) then
+		if char.clubs then
+			for id, club in pairs(clubs) do
+				if not char.clubs[id] then
+					Record("club", club.name, "+", club.b and "b" or "c")
+				end
+			end
+			for id, club in pairs(char.clubs) do
+				if not clubs[id] then
+					Record("club", club.name, "-", club.b and "b" or "c")
+				end
+			end
+		end
+		char.clubs = clubs
+	end
+end
+
+local function ScheduleSocial()
+	if socialReady and not socialPending then
+		socialPending = true
+		C_Timer.After(2, CheckSocial)
+	end
+end
+
 local events = CreateFrame("Frame")
 events:RegisterEvent("ADDON_LOADED")
 events:RegisterEvent("PLAYER_ENTERING_WORLD")
@@ -793,7 +951,8 @@ events:RegisterEvent("PLAYER_LOGOUT")
 for _, event in ipairs({ "PLAYER_LEVEL_UP", "ACHIEVEMENT_EARNED", "PLAYER_EQUIPMENT_CHANGED",
 	"PLAYER_AVG_ITEM_LEVEL_UPDATE", "GROUP_ROSTER_UPDATE", "ENCOUNTER_END", "SCENARIO_COMPLETED",
 	"CHALLENGE_MODE_COMPLETED", "SCENARIO_UPDATE", "SCENARIO_CRITERIA_UPDATE", "NEW_TOY_ADDED", "NEW_MOUNT_ADDED",
-	"NEW_PET_ADDED", "MAJOR_FACTION_RENOWN_LEVEL_CHANGED", "FACTION_STANDING_CHANGED" }) do
+	"NEW_PET_ADDED", "MAJOR_FACTION_RENOWN_LEVEL_CHANGED", "FACTION_STANDING_CHANGED", "FRIENDLIST_UPDATE",
+	"BN_FRIEND_LIST_SIZE_CHANGED", "PLAYER_GUILD_UPDATE", "CLUB_ADDED", "CLUB_REMOVED" }) do
 	if not C_EventUtils or not C_EventUtils.IsEventValid or C_EventUtils.IsEventValid(event) then
 		events:RegisterEvent(event)
 	end
@@ -818,6 +977,10 @@ events:SetScript("OnEvent", function(_, event, ...)
 		if isLogin then
 			OnLogin()
 			C_Timer.After(5, SeedReputations)
+			C_Timer.After(SOCIAL_DELAY, function()
+				socialReady = true
+				CheckSocial()
+			end)
 			if size >= ns.WARN_SIZE then
 				C_Timer.After(10, function()
 					UIErrorsFrame:AddMessage(string.format("Polypode Histoire : journal de %.1f Mo, pensez à "
@@ -868,6 +1031,9 @@ events:SetScript("OnEvent", function(_, event, ...)
 		OnRenownChanged(...)
 	elseif event == "FACTION_STANDING_CHANGED" then
 		OnFactionStandingChanged(...)
+	elseif event == "FRIENDLIST_UPDATE" or event == "BN_FRIEND_LIST_SIZE_CHANGED" or event == "PLAYER_GUILD_UPDATE"
+		or event == "CLUB_ADDED" or event == "CLUB_REMOVED" then
+		ScheduleSocial()
 	elseif event == "CHALLENGE_MODE_COMPLETED" then
 		OnChallengeCompleted()
 	end

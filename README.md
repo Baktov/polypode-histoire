@@ -38,8 +38,8 @@ non ces jours de patchs et d'extensions (cochée par défaut).
 
 **Filtres** (cases à gauche de la barre de titre, libellés abrégés, nom complet au survol) :
 **Con.** connexions, **H-F** hauts faits, **Gou.** gouffres, **Don.** donjons (avec les clés M+),
-**Rai.** raids (entrées comprises), **Col.** collections (jouets, montures, mascottes) et **Rép.**
-renom et réputation. Aucune case cochée (par défaut) :
+**Rai.** raids (entrées comprises), **Col.** collections (jouets, montures, mascottes), **Rép.**
+renom et réputation et **Soc.** social (amis, guildes, communautés). Aucune case cochée (par défaut) :
 tout le journal ; sinon, seuls les événements des catégories cochées, les jours sans événement
 retenu étant masqués. Le choix est gardé.
 
@@ -59,6 +59,8 @@ Dans un jour, les événements sont dans l'ordre de l'heure :
 | Niveau d'objet (sans décimales, seulement quand il dépasse le plus haut connu) | Corwin passe au niveau d'objet 245 (+3) |
 | Jouet, monture, mascotte obtenus | Mordsith obtient la monture « … » |
 | Palier de renom | Mordsith atteint le renom 12 auprès de « … » |
+| Ami ajouté ou retiré (du personnage, ou Battle.net : sans nom de personnage, le compte étant commun) | Mordsith ajoute « Bob-Elune » à ses amis · Ami Battle.net ajouté : « Zed » |
+| Guilde ou communauté rejointe ou quittée | Mordsith rejoint la guilde « … » · Mordsith quitte la communauté « … » |
 | Rang de réputation atteint (amitié comprise ; seulement en montant, la première lecture d'une faction sert de référence) | Mordsith devient « Révéré » auprès de « … » |
 
 La **durée** entre parenthèses part de l'entrée dans l'instance, ou de la fin précédente dans la même
@@ -124,12 +126,16 @@ personnage = `nom-royaume`, jour = date locale. Types et champs :
 | `boss` | nom du boss, identifiant de difficulté, nom du raid, durée |
 | `toy` / `mount` / `pet` | identifiant (objet, monture, espèce de mascotte), nom |
 | `renown` | identifiant de la faction majeure, palier, nom de la faction |
+| `friend` | nom (BattleTag sans numéro pour un ami Battle.net), `+` / `-`, `c` (personnage) / `b` (Battle.net) |
+| `guild` | nom de la guilde, `+` / `-` |
+| `club` | nom de la communauté, `+` / `-`, `c` / `b` |
 | `rep` | identifiant de la faction, rang (texte), nom de la faction, numéro du rang |
 
 ---
 
 ## Version
 
+`1.9.0` : social : amis (du personnage et Battle.net) ajoutés ou retirés, guildes et communautés rejointes ou quittées ; filtre « Soc. ».
 `1.8.0` : jouets, montures et mascottes obtenus ; paliers de renom et rangs de réputation atteints ; filtres « Col. » et « Rép. ». Nouveau fichier de sauvegarde par personnage (`PolypodeHistoireChar`) : redémarrer le jeu (un /reload ne suffit pas).
 `1.7.0` : patchs annoncés à venir affichés (« à venir ») ; case « Ext » à droite du titre pour afficher ou masquer les jours de patchs et d'extensions.
 `1.6.0` : jours de sortie des patchs (Midnight) en vert avec leur nom, dans les mois affichés.
