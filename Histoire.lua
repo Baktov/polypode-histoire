@@ -21,14 +21,14 @@ local MERGE_WINDOW = 300 -- secondes
 -- les personnages d'une même ligne.
 local DURATION_FIELD = { delve = 7, dng = 6, mplus = 8, boss = 7 }
 local INSTANCE_KINDS = { delve = "le gouffre", party = "le donjon", raid = "le raid" }
-local MIN_WIDTH, MIN_HEIGHT = 600, 220
--- Filtres de la barre de titre : clé, libellé, description de l'infobulle.
+local MIN_WIDTH, MIN_HEIGHT = 460, 220
+-- Filtres de la barre de titre : clé, libellé de l'infobulle, abrégé à droite de la case, description.
 local FILTERS = {
-	{ key = "conn", label = "Connexions", tip = "Connexions et déconnexions (avec le temps joué)." },
-	{ key = "ach", label = "Hauts faits", tip = "Hauts faits obtenus." },
-	{ key = "delve", label = "Gouffres", tip = "Entrées dans un gouffre et gouffres (ou sections) terminés." },
-	{ key = "dungeon", label = "Donjons", tip = "Entrées dans un donjon, donjons terminés et clés mythiques+." },
-	{ key = "raid", label = "Raids", tip = "Entrées dans un raid et boss de raid vaincus." },
+	{ key = "conn", label = "Connexions", short = "Con.", tip = "Connexions et déconnexions (avec le temps joué)." },
+	{ key = "ach", label = "Hauts faits", short = "H-F", tip = "Hauts faits obtenus." },
+	{ key = "delve", label = "Gouffres", short = "Gou.", tip = "Entrées dans un gouffre et gouffres (ou sections) terminés." },
+	{ key = "dungeon", label = "Donjons", short = "Don.", tip = "Entrées dans un donjon, donjons terminés et clés mythiques+." },
+	{ key = "raid", label = "Raids", short = "Rai.", tip = "Entrées dans un raid et boss de raid vaincus." },
 }
 local CATEGORY_OF_KIND = { ["in"] = "conn", out = "conn", ach = "ach", delve = "delve", dng = "dungeon",
 	mplus = "dungeon", boss = "raid" }
@@ -451,7 +451,7 @@ end
 local function Build()
 	local settings = Settings()
 	frame = CreateFrame("Frame", "PolypodeHistoireFrame", UIParent, "BackdropTemplate")
-	frame:SetSize(math.max(settings.width or 620, MIN_WIDTH), math.max(settings.height or 420, MIN_HEIGHT))
+	frame:SetSize(math.max(settings.width or 560, MIN_WIDTH), math.max(settings.height or 420, MIN_HEIGHT))
 	frame:SetPoint("CENTER")
 	frame:SetFrameStrata("DIALOG")
 	frame:SetMovable(true)
@@ -513,7 +513,7 @@ local function Build()
 		-- Libellé posé après le skin (EllesmereUI le collait à son cadre).
 		local text = check.Text or check.text
 		if text then
-			text:SetText(filter.label)
+			text:SetText(filter.short)
 			text:SetFontObject("GameFontHighlightSmall")
 			text:ClearAllPoints()
 			text:SetPoint("LEFT", check, "RIGHT", 3, 0)
