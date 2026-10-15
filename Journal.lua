@@ -23,6 +23,12 @@ local P = Polypode -- dépendance obligatoire (## Dependencies: Polypode), charg
 --   dng  nom~difficulté~durée  donjon terminé (dernier boss du Journal des donjons vaincu, hors clé M+)
 --   mplus nom~niveau~àTemps(1/0)~améliorations~durée  clé mythique+ terminée
 --   boss nom~difficulté~raid~durée  boss de raid vaincu
+--   toy  id~nom       jouet obtenu (id d'objet)
+--   mount id~nom      monture obtenue (mountID)
+--   pet  id~nom       mascotte obtenue (speciesID)
+--   renown id~niveau~faction  palier de renom atteint (faction majeure)
+--   rep  id~rang~faction~niveau  rang de réputation atteint (rang = texte du jeu : « Révéré », rang
+--                     d'amitié… ; niveau = numéro du rang), noté seulement en montant
 --   durée : secondes depuis l'entrée, ou depuis le précédent gouffre / donjon / boss terminé dans la
 --   même instance (clé M+ : temps du chrono) ; vide si inconnue (absente des anciens événements).
 -- Messages : HIST:token:E:<événement> (nouvel événement), HIST:token:R:<événement> (retrait :
@@ -686,13 +692,108 @@ if C_UI and type(C_UI.Reload) == "function" then
 	end)
 end
 
+-- COLLECTIONS ET RÉPUTATIONS --------------------------------------------------------------------
+
+-- Collections (jouets, montures, mascottes) : un nom lu au moment du relevé, gardé dans l'événement.
+local function OnToyAdded(itemID)
+	local name
+	if C_ToyBox and C_ToyBox.GetToyInfo then
+		name = select(2, C_ToyBox.GetToyInfo(itemID))
+	end
+	name = name or (C_Item and C_Item.GetItemNameByID and C_Item.GetItemNameByID(itemID))
+	Record("toy", itemID, name or "")
+end
+
+local function OnMountAdded(mountID)
+	local name = C_MountJournal and C_MountJournal.GetMountInfoByID and C_MountJournal.GetMountInfoByID(mountID)
+	Record("mount", mountID, name or "")
+end
+
+local function OnPetAdded(petGUID)
+	if not (C_PetJournal and C_PetJournal.GetPetInfoByPetID) then
+		return
+	end
+	local ok, speciesID, _, _, _, _, _, _, name = pcall(C_PetJournal.GetPetInfoByPetID, petGUID)
+	if ok and speciesID then
+		Record("pet", speciesID, name or "")
+	end
+end
+
+local function OnRenownChanged(factionID, newLevel, oldLevel)
+	if Secret(newLevel) or not newLevel or (oldLevel and newLevel <= oldLevel) then
+		return
+	end
+	local data = C_MajorFactions and C_MajorFactions.GetMajorFactionData and C_MajorFactions.GetMajorFactionData(factionID)
+	Record("renown", factionID, newLevel, data and data.name or "")
+end
+
+-- Rang d'une réputation (hors factions majeures, suivies par leur renom) : numéro et texte, ou nil.
+-- Amitié : rang de C_GossipInfo ; sinon reaction 1..8 (FACTION_STANDING_LABEL<n>).
+local function ReputationRank(factionID)
+	if C_Reputation and C_Reputation.IsMajorFaction and C_Reputation.IsMajorFaction(factionID) then
+		return nil
+	end
+	local data = C_Reputation and C_Reputation.GetFactionDataByID and C_Reputation.GetFactionDataByID(factionID)
+	if not data or data.isHeader and not data.isHeaderWithRep then
+		return nil
+	end
+	if C_GossipInfo and C_GossipInfo.GetFriendshipReputation then
+		local friendship = C_GossipInfo.GetFriendshipReputation(factionID)
+		if friendship and friendship.friendshipFactionID and friendship.friendshipFactionID > 0 then
+			local ranks = C_GossipInfo.GetFriendshipReputationRanks and C_GossipInfo.GetFriendshipReputationRanks(factionID)
+			return ranks and ranks.currentLevel, friendship.reaction, data.name
+		end
+	end
+	return data.reaction, data.reaction and _G["FACTION_STANDING_LABEL" .. data.reaction], data.name
+end
+
+-- Rangs connus du personnage joué : PolypodeHistoireChar.rep[factionID] (fichier propre au
+-- personnage, écrit par son seul client). Première lecture d'une faction = référence, rien de noté.
+local function OnFactionStandingChanged(factionID)
+	if not factionID or Secret(factionID) then
+		return
+	end
+	local ok, level, rank, name = pcall(ReputationRank, factionID)
+	if not ok or not level or Secret(level) then
+		return
+	end
+	PolypodeHistoireChar = PolypodeHistoireChar or {}
+	PolypodeHistoireChar.rep = PolypodeHistoireChar.rep or {}
+	local known = PolypodeHistoireChar.rep[factionID]
+	PolypodeHistoireChar.rep[factionID] = math.max(known or 0, level)
+	if known and level > known then
+		Record("rep", factionID, rank or level, name or "", level)
+	end
+end
+
+-- À la connexion : rangs de référence des factions visibles dans le panneau Réputation (celles
+-- des en-têtes repliés le seront à leur premier changement).
+local function SeedReputations()
+	if not (C_Reputation and C_Reputation.GetNumFactions and C_Reputation.GetFactionDataByIndex) then
+		return
+	end
+	PolypodeHistoireChar = PolypodeHistoireChar or {}
+	PolypodeHistoireChar.rep = PolypodeHistoireChar.rep or {}
+	for i = 1, C_Reputation.GetNumFactions() do
+		local data = C_Reputation.GetFactionDataByIndex(i)
+		local factionID = data and data.factionID
+		if factionID and not Secret(factionID) and not PolypodeHistoireChar.rep[factionID] then
+			local ok, level = pcall(ReputationRank, factionID)
+			if ok and level and not Secret(level) then
+				PolypodeHistoireChar.rep[factionID] = level
+			end
+		end
+	end
+end
+
 local events = CreateFrame("Frame")
 events:RegisterEvent("ADDON_LOADED")
 events:RegisterEvent("PLAYER_ENTERING_WORLD")
 events:RegisterEvent("PLAYER_LOGOUT")
 for _, event in ipairs({ "PLAYER_LEVEL_UP", "ACHIEVEMENT_EARNED", "PLAYER_EQUIPMENT_CHANGED",
 	"PLAYER_AVG_ITEM_LEVEL_UPDATE", "GROUP_ROSTER_UPDATE", "ENCOUNTER_END", "SCENARIO_COMPLETED",
-	"CHALLENGE_MODE_COMPLETED", "SCENARIO_UPDATE", "SCENARIO_CRITERIA_UPDATE" }) do
+	"CHALLENGE_MODE_COMPLETED", "SCENARIO_UPDATE", "SCENARIO_CRITERIA_UPDATE", "NEW_TOY_ADDED", "NEW_MOUNT_ADDED",
+	"NEW_PET_ADDED", "MAJOR_FACTION_RENOWN_LEVEL_CHANGED", "FACTION_STANDING_CHANGED" }) do
 	if not C_EventUtils or not C_EventUtils.IsEventValid or C_EventUtils.IsEventValid(event) then
 		events:RegisterEvent(event)
 	end
@@ -716,6 +817,7 @@ events:SetScript("OnEvent", function(_, event, ...)
 		local isLogin, isReload = ...
 		if isLogin then
 			OnLogin()
+			C_Timer.After(5, SeedReputations)
 			if size >= ns.WARN_SIZE then
 				C_Timer.After(10, function()
 					UIErrorsFrame:AddMessage(string.format("Polypode Histoire : journal de %.1f Mo, pensez à "
@@ -756,6 +858,16 @@ events:SetScript("OnEvent", function(_, event, ...)
 		OnScenarioCompleted()
 	elseif event == "SCENARIO_UPDATE" or event == "SCENARIO_CRITERIA_UPDATE" then
 		UpdateDelveState()
+	elseif event == "NEW_TOY_ADDED" then
+		OnToyAdded(...)
+	elseif event == "NEW_MOUNT_ADDED" then
+		OnMountAdded(...)
+	elseif event == "NEW_PET_ADDED" then
+		OnPetAdded(...)
+	elseif event == "MAJOR_FACTION_RENOWN_LEVEL_CHANGED" then
+		OnRenownChanged(...)
+	elseif event == "FACTION_STANDING_CHANGED" then
+		OnFactionStandingChanged(...)
 	elseif event == "CHALLENGE_MODE_COMPLETED" then
 		OnChallengeCompleted()
 	end

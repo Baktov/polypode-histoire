@@ -21,7 +21,7 @@ local MERGE_WINDOW = 300 -- secondes
 -- les personnages d'une même ligne.
 local DURATION_FIELD = { delve = 7, dng = 6, mplus = 8, boss = 7 }
 local INSTANCE_KINDS = { delve = "le gouffre", party = "le donjon", raid = "le raid" }
-local MIN_WIDTH, MIN_HEIGHT = 500, 220
+local MIN_WIDTH, MIN_HEIGHT = 580, 220
 -- Filtres de la barre de titre : clé, libellé de l'infobulle, abrégé à droite de la case, description.
 local FILTERS = {
 	{ key = "conn", label = "Connexions", short = "Con.", tip = "Connexions et déconnexions (avec le temps joué)." },
@@ -29,9 +29,12 @@ local FILTERS = {
 	{ key = "delve", label = "Gouffres", short = "Gou.", tip = "Entrées dans un gouffre et gouffres (ou sections) terminés." },
 	{ key = "dungeon", label = "Donjons", short = "Don.", tip = "Entrées dans un donjon, donjons terminés et clés mythiques+." },
 	{ key = "raid", label = "Raids", short = "Rai.", tip = "Entrées dans un raid et boss de raid vaincus." },
+	{ key = "coll", label = "Collections", short = "Col.", tip = "Jouets, montures et mascottes obtenus." },
+	{ key = "rep", label = "Renom et réputation", short = "Rép.", tip = "Paliers de renom et rangs de réputation "
+		.. "atteints (amitié comprise)." },
 }
 local CATEGORY_OF_KIND = { ["in"] = "conn", out = "conn", ach = "ach", delve = "delve", dng = "dungeon",
-	mplus = "dungeon", boss = "raid" }
+	mplus = "dungeon", boss = "raid", toy = "coll", mount = "coll", pet = "coll", renown = "rep", rep = "rep" }
 local CATEGORY_OF_ENTRY = { delve = "delve", party = "dungeon", raid = "raid" }
 -- Sorties de patchs (Retail, date des serveurs européens : le mercredi), écrites en vert dans
 -- l'en-tête du jour, pour les mois affichés et, à venir, toujours (case « Ext » de la barre de
@@ -134,6 +137,19 @@ local function AchievementName(id)
 	return name or ("n° " .. tostring(id))
 end
 
+-- Nom d'un jouet, d'une monture ou d'une mascotte relevé sans nom (données pas encore chargées).
+local function CollectionName(kind, id)
+	id = tonumber(id)
+	if not id then
+		return nil
+	elseif kind == "toy" then
+		return C_Item and C_Item.GetItemNameByID and C_Item.GetItemNameByID(id)
+	elseif kind == "mount" then
+		return C_MountJournal and C_MountJournal.GetMountInfoByID and (C_MountJournal.GetMountInfoByID(id))
+	end
+	return C_PetJournal and C_PetJournal.GetPetInfoBySpeciesID and (C_PetJournal.GetPetInfoBySpeciesID(id))
+end
+
 -- Ouvre la fenêtre des hauts faits du jeu sur ce haut fait.
 local function OpenAchievement(id)
 	id = tonumber(id)
@@ -234,6 +250,16 @@ local function EventText(line)
 		local gain = (tonumber(f[4]) or 0) - (tonumber(f[5]) or 0)
 		return who .. " " .. verb("passe", "passent") .. " au |cffffd200niveau d'objet " .. (f[4] or "?")
 			.. "|r |cff40ff40(+" .. gain .. ")|r"
+	elseif kind == "toy" or kind == "mount" or kind == "pet" then
+		local noun = kind == "toy" and "le jouet" or (kind == "mount" and "la monture" or "la mascotte")
+		local name = f[5] and f[5] ~= "" and f[5] or CollectionName(kind, f[4]) or ("n° " .. tostring(f[4]))
+		return who .. " " .. verb("obtient", "obtiennent") .. " " .. noun .. " " .. Quoted(name)
+	elseif kind == "renown" then
+		return who .. " " .. verb("atteint", "atteignent") .. " le |cffffd200renom " .. (f[5] or "?") .. "|r auprès de "
+			.. Quoted(f[6] ~= "" and f[6] or "?")
+	elseif kind == "rep" then
+		return who .. " " .. verb("devient", "deviennent") .. " " .. Quoted(f[5] or "?") .. " auprès de "
+			.. Quoted(f[6] ~= "" and f[6] or "?")
 	elseif kind == "enter" then
 		local difficulty = f[6] ~= "delve" and DifficultyName(f[5])
 		return who .. " |cff999999" .. verb("entre", "entrent") .. " dans " .. (INSTANCE_KINDS[f[6]] or "l'instance")
@@ -499,7 +525,7 @@ end
 local function Build()
 	local settings = Settings()
 	frame = CreateFrame("Frame", "PolypodeHistoireFrame", UIParent, "BackdropTemplate")
-	frame:SetSize(math.max(settings.width or 560, MIN_WIDTH), math.max(settings.height or 420, MIN_HEIGHT))
+	frame:SetSize(math.max(settings.width or 620, MIN_WIDTH), math.max(settings.height or 420, MIN_HEIGHT))
 	frame:SetPoint("CENTER")
 	frame:SetFrameStrata("DIALOG")
 	frame:SetMovable(true)
