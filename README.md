@@ -30,6 +30,11 @@ un mois ou un jour : le replier ou le déplier (par défaut, seuls l'année, le 
 cours sont dépliés ; vos choix sont gardés). Le bouton **Tout replier** / **Tout déplier** agit sur
 tout l'arbre. Le nombre d'événements est indiqué à droite de chaque année, mois et jour.
 
+**Filtres** (cases à gauche de la barre de titre) : **Connexions**, **Hauts faits**, **Gouffres**,
+**Donjons** (avec les clés M+) et **Raids** (entrées comprises). Aucune case cochée (par défaut) :
+tout le journal ; sinon, seuls les événements des catégories cochées, les jours sans événement
+retenu étant masqués. Le choix est gardé.
+
 Dans un jour, les événements sont dans l'ordre de l'heure :
 
 | Événement | Exemple |
@@ -111,6 +116,7 @@ personnage = `nom-royaume`, jour = date locale. Types et champs :
 
 ## Version
 
+`1.5.0` : filtres dans la barre de titre (connexions, hauts faits, gouffres, donjons, raids) ; aucun coché = tout le journal.
 `1.4.0` : événements d'un jour du plus récent au plus ancien ; entrée dans un gouffre, un donjon ou un raid notée, et durée affichée à la fin (gouffre, section, donjon, clé M+, boss de raid).
 `1.3.0` : temps joué affiché à la déconnexion ; hauts faits affichés par leur nom (et non plus leur numéro), clic pour les ouvrir dans la fenêtre des hauts faits ; gouffres : palier lu dans l'en-tête du scénario (il valait 0 en solo) et section terminée notée.
 `1.2.0` : clic droit sur une entrée pour la supprimer du journal (avec confirmation, synchronisé entre clients).

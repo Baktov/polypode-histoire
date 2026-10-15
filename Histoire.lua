@@ -12,13 +12,27 @@ local P = Polypode
 -- détail. En-tête : nombre d'événements et taille du journal (orange au-delà de ns.WARN_SIZE,
 -- rouge au-delà de ns.ALERT_SIZE) ; boutons « Tout replier » / « Tout déplier » et « Exporter ».
 -- Clic droit sur une ligne d'événement : la supprimer du journal, après confirmation.
+-- FILTRES (cases à gauche de la barre de titre, PolypodeHistoireDB.filters) : aucune cochée = tout
+-- le journal ; sinon seuls les événements des catégories cochées (FILTERS, EventCategory), les
+-- jours, mois et années sans événement retenu étant omis.
 
 local MERGE_WINDOW = 300 -- secondes
 -- Champ de la durée (secondes) des événements de fin d'instance ; il ne compte pas pour réunir
 -- les personnages d'une même ligne.
 local DURATION_FIELD = { delve = 7, dng = 6, mplus = 8, boss = 7 }
 local INSTANCE_KINDS = { delve = "le gouffre", party = "le donjon", raid = "le raid" }
-local MIN_WIDTH, MIN_HEIGHT = 420, 220
+local MIN_WIDTH, MIN_HEIGHT = 600, 220
+-- Filtres de la barre de titre : clé, libellé, description de l'infobulle.
+local FILTERS = {
+	{ key = "conn", label = "Connexions", tip = "Connexions et déconnexions (avec le temps joué)." },
+	{ key = "ach", label = "Hauts faits", tip = "Hauts faits obtenus." },
+	{ key = "delve", label = "Gouffres", tip = "Entrées dans un gouffre et gouffres (ou sections) terminés." },
+	{ key = "dungeon", label = "Donjons", tip = "Entrées dans un donjon, donjons terminés et clés mythiques+." },
+	{ key = "raid", label = "Raids", tip = "Entrées dans un raid et boss de raid vaincus." },
+}
+local CATEGORY_OF_KIND = { ["in"] = "conn", out = "conn", ach = "ach", delve = "delve", dng = "dungeon",
+	mplus = "dungeon", boss = "raid" }
+local CATEGORY_OF_ENTRY = { delve = "delve", party = "dungeon", raid = "raid" }
 local MONTHS = { "Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre",
 	"Octobre", "Novembre", "Décembre" }
 local WEEKDAYS = { "Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi" }
@@ -28,7 +42,33 @@ local frame, listPanel
 local function Settings()
 	PolypodeHistoireDB = PolypodeHistoireDB or {}
 	PolypodeHistoireDB.open = PolypodeHistoireDB.open or {}
+	PolypodeHistoireDB.filters = PolypodeHistoireDB.filters or {}
 	return PolypodeHistoireDB
+end
+
+-- Catégorie de filtre d'un événement (nil : groupes, niveaux, niveau d'objet).
+local function EventCategory(event)
+	local _, _, kind, fields = ns.Parse(event)
+	if kind == "enter" then
+		return CATEGORY_OF_ENTRY[fields[6]]
+	end
+	return CATEGORY_OF_KIND[kind]
+end
+
+-- Événements d'un jour retenus par les filtres (la liste elle-même si aucun n'est coché).
+local function Filtered(list)
+	local filters = Settings().filters
+	if not next(filters) then
+		return list
+	end
+	local kept = {}
+	for _, event in ipairs(list) do
+		local category = EventCategory(event)
+		if category and filters[category] then
+			kept[#kept + 1] = event
+		end
+	end
+	return kept
 end
 
 local function ShowTooltip()
@@ -235,9 +275,10 @@ end
 -- Lignes de la liste : années, mois, jours (du plus récent au plus ancien), puis les événements
 -- des jours dépliés. Chaque en-tête : { header = niveau 1..3, key, label, count }.
 local function BuildItems()
-	local days = {}
+	local days, lists = {}, {}
 	for day, list in pairs(ns.GetDays()) do
-		if #list > 0 then
+		lists[day] = Filtered(list)
+		if #lists[day] > 0 then
 			days[#days + 1] = day
 		end
 	end
@@ -247,7 +288,7 @@ local function BuildItems()
 	-- Totaux par année et par mois.
 	local totals = {}
 	for _, day in ipairs(days) do
-		local n = #ns.GetDays()[day]
+		local n = #lists[day]
 		totals[day:sub(1, 4)] = (totals[day:sub(1, 4)] or 0) + n
 		totals[day:sub(1, 7)] = (totals[day:sub(1, 7)] or 0) + n
 	end
@@ -268,7 +309,7 @@ local function BuildItems()
 			if IsOpen(month) then
 				local t = time({ year = tonumber(year), month = tonumber(day:sub(6, 7)), day = tonumber(day:sub(9, 10)),
 					hour = 12 })
-				local list = ns.GetDays()[day]
+				local list = lists[day]
 				items[#items + 1] = { header = 3, key = day,
 					label = WEEKDAYS[tonumber(date("%w", t)) + 1] .. " " .. tonumber(day:sub(9, 10)) .. " "
 						.. MONTHS[tonumber(day:sub(6, 7))]:lower(), count = #list }
@@ -410,7 +451,7 @@ end
 local function Build()
 	local settings = Settings()
 	frame = CreateFrame("Frame", "PolypodeHistoireFrame", UIParent, "BackdropTemplate")
-	frame:SetSize(settings.width or 560, settings.height or 420)
+	frame:SetSize(math.max(settings.width or 620, MIN_WIDTH), math.max(settings.height or 420, MIN_HEIGHT))
 	frame:SetPoint("CENTER")
 	frame:SetFrameStrata("DIALOG")
 	frame:SetMovable(true)
@@ -433,14 +474,56 @@ local function Build()
 	frame:Hide()
 	tinsert(UISpecialFrames, "PolypodeHistoireFrame") -- Échap ferme la fenêtre
 
-	local title = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-	title:SetPoint("TOP", 0, -14)
-	title:SetText("Histoire")
-	frame.TitleText = title
-
 	local closeBtn = CreateFrame("Button", nil, frame, "UIPanelCloseButton")
 	closeBtn:SetPoint("TOPRIGHT", -4, -4)
 	frame.CloseButton = closeBtn
+
+	-- Filtres : cases à gauche de la barre de titre ; le titre, à droite, contre la croix.
+	local title = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+	title:SetPoint("RIGHT", closeBtn, "LEFT", -6, 0)
+	title:SetText("Histoire")
+	frame.TitleText = title
+	frame.filterChecks = {}
+	local previous
+	for _, filter in ipairs(FILTERS) do
+		local check = CreateFrame("CheckButton", nil, frame, "UICheckButtonTemplate")
+		check:SetSize(22, 22)
+		if previous then
+			check:SetPoint("LEFT", previous, "RIGHT", 8, 0)
+		else
+			check:SetPoint("TOPLEFT", 10, -8)
+		end
+		check:SetChecked(settings.filters[filter.key] == true)
+		check:SetScript("OnClick", function(self)
+			Settings().filters[filter.key] = self:GetChecked() and true or nil
+			ns.Refresh()
+		end)
+		check:SetScript("OnEnter", function(self)
+			GameTooltip:SetOwner(self, "ANCHOR_BOTTOM")
+			GameTooltip:AddLine(filter.label)
+			GameTooltip:AddLine(filter.tip, 1, 1, 1, true)
+			GameTooltip:AddLine("Cochée : n'affiche que ces événements (avec les autres cases cochées). Aucune "
+				.. "case cochée : tout le journal.", 0.7, 0.7, 0.7, true)
+			ShowTooltip()
+		end)
+		check:SetScript("OnLeave", GameTooltip_Hide)
+		if P.SkinCheckBox then
+			P.SkinCheckBox(check)
+		end
+		-- Libellé posé après le skin (EllesmereUI le collait à son cadre).
+		local text = check.Text or check.text
+		if text then
+			text:SetText(filter.label)
+			text:SetFontObject("GameFontHighlightSmall")
+			text:ClearAllPoints()
+			text:SetPoint("LEFT", check, "RIGHT", 3, 0)
+			check:SetHitRectInsets(0, -(text:GetStringWidth() + 3), 0, 0)
+			previous = text
+		else
+			previous = check
+		end
+		frame.filterChecks[#frame.filterChecks + 1] = check
+	end
 
 	listPanel = P.CreatePanel(frame, "")
 	listPanel:SetPoint("TOPLEFT", 12, -36)
@@ -518,7 +601,8 @@ function ns.Refresh()
 	frame.collapseButton.collapseAll = anyOpen
 	frame.collapseButton:SetText(anyOpen and "Tout replier" or "Tout déplier")
 	listPanel.header:SetText(HeaderText())
-	listPanel.emptyText:SetText("Aucun événement noté pour l'instant.")
+	listPanel.emptyText:SetText(next(Settings().filters) and "Aucun événement pour les filtres cochés."
+		or "Aucun événement noté pour l'instant.")
 	P.SetListData(listPanel, items)
 end
 P.RefreshHistoire = ns.Refresh
