@@ -60,9 +60,67 @@ local function DifficultyName(id)
 	return name and name ~= "" and name or nil
 end
 
+-- (« GetAchievementInfo and GetAchievementInfo(...) » ne garderait que le premier retour : l'id.)
 local function AchievementName(id)
-	local _, name = GetAchievementInfo and GetAchievementInfo(tonumber(id) or 0)
+	local name
+	if GetAchievementInfo then
+		name = select(2, GetAchievementInfo(tonumber(id) or 0))
+	end
 	return name or ("n° " .. tostring(id))
+end
+
+-- Ouvre la fenêtre des hauts faits du jeu sur ce haut fait.
+local function OpenAchievement(id)
+	id = tonumber(id)
+	if not id or (GetAchievementInfo and not GetAchievementInfo(id)) then
+		return
+	end
+	if ShowAchievementFrameForAchievement then
+		ShowAchievementFrameForAchievement(id)
+	elseif AchievementFrame_LoadUI and AchievementFrame_LoadUI() then
+		if not AchievementFrame:IsShown() and AchievementFrame_ToggleAchievementFrame then
+			AchievementFrame_ToggleAchievementFrame()
+		end
+		if AchievementFrame_SelectAchievement then
+			AchievementFrame_SelectAchievement(id)
+		end
+	end
+end
+
+-- Durée d'une session : « 2 h 05 », « 42 min », « < 1 min ».
+local function DurationText(seconds)
+	local minutes = math.floor(seconds / 60)
+	if minutes < 1 then
+		return "< 1 min"
+	elseif minutes < 60 then
+		return minutes .. " min"
+	end
+	return string.format("%d h %02d", math.floor(minutes / 60), minutes % 60)
+end
+
+-- Durées des sessions : [événement « out »] = secondes depuis le « in » précédent du même personnage
+-- (une déco-reco rapide n'ayant laissé ni « out » ni « in », la session reste d'un seul tenant).
+local function SessionDurations(days)
+	local sorted = {}
+	for day in pairs(days) do
+		sorted[#sorted + 1] = day
+	end
+	table.sort(sorted)
+	local durations, lastIn = {}, {}
+	for _, day in ipairs(sorted) do
+		for _, event in ipairs(days[day]) do
+			local time, key, kind = ns.Parse(event)
+			if kind == "in" then
+				lastIn[key] = time
+			elseif kind == "out" then
+				if lastIn[key] and time then
+					durations[event] = time - lastIn[key]
+				end
+				lastIn[key] = nil
+			end
+		end
+	end
+	return durations
 end
 
 local function Quoted(text)
@@ -85,7 +143,8 @@ local function EventText(line)
 	if kind == "in" then
 		return who .. " " .. verb("se connecte", "se connectent")
 	elseif kind == "out" then
-		return who .. " |cff999999" .. verb("se déconnecte", "se déconnectent") .. "|r"
+		local played = #line.keys == 1 and line.durations[1] and (" (" .. DurationText(line.durations[1]) .. ")") or ""
+		return who .. " |cff999999" .. verb("se déconnecte", "se déconnectent") .. played .. "|r"
 	elseif kind == "grp" then
 		return "|cff40ff40L'équipe " .. Quoted(f[4]) .. " se groupe|r (" .. (f[5] or "?") .. " personnages)"
 	elseif kind == "lvl" then
@@ -97,8 +156,10 @@ local function EventText(line)
 		return who .. " " .. verb("passe", "passent") .. " au |cffffd200niveau d'objet " .. (f[4] or "?")
 			.. "|r |cff40ff40(+" .. gain .. ")|r"
 	elseif kind == "delve" then
-		local tier = f[5] and f[5] ~= "" and (" (palier " .. f[5] .. ")") or ""
-		return who .. " " .. verb("termine", "terminent") .. " le gouffre " .. Quoted(f[4]) .. tier
+		-- Palier « 0 » : inconnu (anciens événements, lus dans les données du groupe à l'entrée).
+		local tier = f[5] and f[5] ~= "" and f[5] ~= "0" and (" (palier " .. f[5] .. ")") or ""
+		local section = f[6] and f[6] ~= "" and (" : " .. Quoted(f[6])) or ""
+		return who .. " " .. verb("termine", "terminent") .. " le gouffre " .. Quoted(f[4]) .. section .. tier
 	elseif kind == "dng" then
 		local difficulty = DifficultyName(f[5])
 		return who .. " " .. verb("termine", "terminent") .. " le donjon " .. Quoted(f[4])
@@ -117,7 +178,7 @@ end
 
 -- Lignes d'un jour : événements dans l'ordre, ceux de même type et mêmes champs réunis s'ils sont
 -- à moins de MERGE_WINDOW secondes d'écart et de personnages différents.
-local function DayLines(list)
+local function DayLines(list, durations)
 	local lines, open = {}, {}
 	for _, event in ipairs(list) do
 		local time, key, kind, fields = ns.Parse(event)
@@ -131,10 +192,11 @@ local function DayLines(list)
 			line.keys[#line.keys + 1] = key
 			line.times[#line.times + 1] = time
 			line.events[#line.events + 1] = event
+			line.durations[#line.keys] = durations[event]
 			line.last = time
 		else
 			line = { event = true, kind = kind, fields = fields, time = time, last = time, keys = { key },
-				times = { time }, events = { event } }
+				times = { time }, events = { event }, durations = { durations[event] } }
 			lines[#lines + 1] = line
 			open[mergeKey] = line
 		end
@@ -163,6 +225,7 @@ local function BuildItems()
 		totals[day:sub(1, 4)] = (totals[day:sub(1, 4)] or 0) + n
 		totals[day:sub(1, 7)] = (totals[day:sub(1, 7)] or 0) + n
 	end
+	local durations = SessionDurations(ns.GetDays())
 	local items = {}
 	local year, month
 	for _, day in ipairs(days) do
@@ -184,7 +247,7 @@ local function BuildItems()
 					label = WEEKDAYS[tonumber(date("%w", t)) + 1] .. " " .. tonumber(day:sub(9, 10)) .. " "
 						.. MONTHS[tonumber(day:sub(6, 7))]:lower(), count = #list }
 				if IsOpen(day) then
-					for _, line in ipairs(DayLines(list)) do
+					for _, line in ipairs(DayLines(list, durations)) do
 						items[#items + 1] = line
 					end
 				end
@@ -212,7 +275,11 @@ local function ItemTooltip(item)
 	end
 	local lines = { date("%d/%m/%Y", item.time) }
 	for i, key in ipairs(item.keys) do
-		lines[#lines + 1] = { CharName(key), date("%H:%M:%S", item.times[i]) }
+		local played = item.durations[i] and ("  |cff999999(" .. DurationText(item.durations[i]) .. ")|r") or ""
+		lines[#lines + 1] = { CharName(key), date("%H:%M:%S", item.times[i]) .. played }
+	end
+	if item.kind == "ach" then
+		lines[#lines + 1] = "Clic : ouvrir le haut fait"
 	end
 	lines[#lines + 1] = "Clic droit : supprimer"
 	return lines
@@ -246,6 +313,8 @@ local function OnItemClick(item, mouseButton)
 		ns.Refresh()
 	elseif mouseButton == "RightButton" then
 		AskDelete(item)
+	elseif item.kind == "ach" then
+		OpenAchievement(item.fields[4])
 	end
 end
 

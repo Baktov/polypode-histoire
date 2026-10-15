@@ -17,7 +17,8 @@ local P = Polypode -- dépendance obligatoire (## Dependencies: Polypode), charg
 --   lvl  niveau       niveau atteint
 --   ach  id           haut fait obtenu (pas ceux déjà obtenus par le compte)
 --   ilvl nouveau~ancien  niveau d'objet équipé, sans décimales, quand il dépasse le plus haut connu
---   delve nom~palier  gouffre terminé
+--   delve nom~palier~section  gouffre terminé (section : étape du scénario, pour les gouffres en
+--                     plusieurs parties ; palier « 0 » dans les anciens événements = inconnu)
 --   dng  nom~difficulté  donjon terminé (dernier boss du Journal des donjons vaincu, hors clé M+)
 --   mplus nom~niveau~àTemps(1/0)~améliorations  clé mythique+ terminée
 --   boss nom~difficulté~raid  boss de raid vaincu
@@ -37,6 +38,8 @@ local SESSION_RESEND_MAX = 100 -- événements de la session renvoyés à un cli
 local GROUP_MERGE_DELAY = 2 -- secondes : regroupe les GROUP_ROSTER_UPDATE rapprochés
 local ILVL_DELAY = 3 -- secondes : regroupe les changements d'équipement
 local SHORT_DELAY = 180 -- secondes : déco-reco ou session plus courtes ne sont pas notées
+local DELVES_HEADER_WIDGET = Enum and Enum.UIWidgetVisualizationType
+	and Enum.UIWidgetVisualizationType.ScenarioHeaderDelves or 29 -- en-tête de scénario d'un gouffre
 
 local store -- = PolypodeHistoireData : { format, days = { [jour] = { événements } }, ilvl = { [clé] = n }, cutoff }
 local seen = {} -- [événement] = true, index des doublons (construit au chargement)
@@ -46,6 +49,7 @@ local count = 0 -- nombre d'événements
 local withdrawn = {} -- [événement] = "R" / "D", retirés pendant la session (renvoyés aux clients qui s'annoncent)
 local reloading -- /reload en cours : PLAYER_LOGOUT n'est pas une déconnexion
 local loginEvent, loginTime -- événement « in » de la session (nil si reconnexion rapide) et son heure
+local delveState -- gouffre en cours : { tier, section } relevés pendant le scénario (UpdateDelveState)
 local loggedOut -- déconnexion traitée par Logout / Quit (annulée par CancelLogout) : événement « out »
 -- noté, "short" si la session était trop courte (connexion retirée, rien de noté), ou "skip" (idem,
 -- connexion déjà supprimée à la main)
@@ -361,18 +365,78 @@ local function OnEncounterEnd(encounterID, encounterName, difficultyID, _, succe
 	end
 end
 
+local function InDelve()
+	local _, _, difficultyID = GetInstanceInfo()
+	return (C_DelvesUI and C_DelvesUI.HasActiveDelve and C_DelvesUI.HasActiveDelve()) or difficultyID == 208
+end
+
+-- Texte sûr (ni secret, ni vide), sinon nil.
+local function SafeText(value)
+	if value == nil or Secret(value) then
+		return nil
+	end
+	value = tostring(value)
+	return value ~= "" and value or nil
+end
+
+-- Palier et section du gouffre en cours. Palier : texte de l'en-tête du scénario (widget
+-- ScenarioHeaderDelves de l'étape, comme Blizzard_UIWidgetTemplateScenarioHeaderDelves), sinon
+-- C_DelvesUI.GetActiveDelveTier (données du groupe à l'entrée : 0 en solo). Section : titre de
+-- l'étape du scénario.
+local function ReadDelveState()
+	local state = {}
+	if C_ScenarioInfo and C_ScenarioInfo.GetScenarioStepInfo then
+		local ok, step = pcall(C_ScenarioInfo.GetScenarioStepInfo)
+		if ok and step then
+			state.section = SafeText(step.title)
+			local setID = step.widgetSetID
+			if setID and not Secret(setID) and C_UIWidgetManager and C_UIWidgetManager.GetAllWidgetsBySetID
+				and C_UIWidgetManager.GetScenarioHeaderDelvesWidgetVisualizationInfo then
+				local okWidgets, widgets = pcall(C_UIWidgetManager.GetAllWidgetsBySetID, setID)
+				for _, widget in ipairs(okWidgets and widgets or {}) do
+					if widget.widgetType == DELVES_HEADER_WIDGET then
+						local okInfo, info = pcall(C_UIWidgetManager.GetScenarioHeaderDelvesWidgetVisualizationInfo,
+							widget.widgetID)
+						local tier = okInfo and info and SafeText(info.tierText)
+						state.tier = tier and tier:match("%d+") or state.tier
+					end
+				end
+			end
+		end
+	end
+	if not state.tier and C_DelvesUI and C_DelvesUI.GetActiveDelveTier then
+		local ok, info = pcall(C_DelvesUI.GetActiveDelveTier)
+		local tier = ok and info and info.tier
+		if tier and not Secret(tier) and tier > 0 then
+			state.tier = tostring(tier)
+		end
+	end
+	return state
+end
+
+-- Relevé gardé pendant le gouffre : à SCENARIO_COMPLETED, l'étape peut déjà être passée.
+local function UpdateDelveState()
+	if InDelve() then
+		local state = ReadDelveState()
+		delveState = { tier = state.tier or (delveState and delveState.tier), section = state.section
+			or (delveState and delveState.section) }
+	else
+		delveState = nil
+	end
+end
+
 local function OnScenarioCompleted()
-	local name, _, difficultyID = GetInstanceInfo()
-	local isDelve = (C_DelvesUI and C_DelvesUI.HasActiveDelve and C_DelvesUI.HasActiveDelve()) or difficultyID == 208
-	if not isDelve then
+	if not InDelve() then
 		return
 	end
-	local tier = ""
-	if C_DelvesUI and C_DelvesUI.GetActiveDelveTier then
-		local ok, info = pcall(C_DelvesUI.GetActiveDelveTier)
-		tier = ok and info and info.tier or ""
+	local name = GetInstanceInfo()
+	local state = ReadDelveState()
+	local tier = state.tier or (delveState and delveState.tier) or ""
+	local section = (delveState and delveState.section) or state.section or ""
+	if section == name then
+		section = ""
 	end
-	Record("delve", name, tier)
+	Record("delve", name, tier, section)
 end
 
 local function OnChallengeCompleted()
@@ -545,7 +609,7 @@ events:RegisterEvent("PLAYER_ENTERING_WORLD")
 events:RegisterEvent("PLAYER_LOGOUT")
 for _, event in ipairs({ "PLAYER_LEVEL_UP", "ACHIEVEMENT_EARNED", "PLAYER_EQUIPMENT_CHANGED",
 	"PLAYER_AVG_ITEM_LEVEL_UPDATE", "GROUP_ROSTER_UPDATE", "ENCOUNTER_END", "SCENARIO_COMPLETED",
-	"CHALLENGE_MODE_COMPLETED" }) do
+	"CHALLENGE_MODE_COMPLETED", "SCENARIO_UPDATE", "SCENARIO_CRITERIA_UPDATE" }) do
 	if not C_EventUtils or not C_EventUtils.IsEventValid or C_EventUtils.IsEventValid(event) then
 		events:RegisterEvent(event)
 	end
@@ -578,6 +642,7 @@ events:SetScript("OnEvent", function(_, event, ...)
 		end
 		CheckTeams(true)
 		C_Timer.After(ILVL_DELAY, CheckItemLevel)
+		UpdateDelveState()
 	elseif event == "PLAYER_LOGOUT" then
 		if not reloading and not loggedOut then
 			OnLogout()
@@ -605,6 +670,8 @@ events:SetScript("OnEvent", function(_, event, ...)
 		OnEncounterEnd(...)
 	elseif event == "SCENARIO_COMPLETED" then
 		OnScenarioCompleted()
+	elseif event == "SCENARIO_UPDATE" or event == "SCENARIO_CRITERIA_UPDATE" then
+		UpdateDelveState()
 	elseif event == "CHALLENGE_MODE_COMPLETED" then
 		OnChallengeCompleted()
 	end
