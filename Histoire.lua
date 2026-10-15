@@ -33,6 +33,22 @@ local FILTERS = {
 local CATEGORY_OF_KIND = { ["in"] = "conn", out = "conn", ach = "ach", delve = "delve", dng = "dungeon",
 	mplus = "dungeon", boss = "raid" }
 local CATEGORY_OF_ENTRY = { delve = "delve", party = "dungeon", raid = "raid" }
+-- Sorties de patchs (Retail, date des serveurs européens : le mercredi), écrites en vert dans
+-- l'en-tête du jour, pour les mois affichés. **À compléter à chaque patch** (date de Mamytwink /
+-- Wowhead, nom officiel français s'il y en a un).
+local PATCHES = {
+	["2026-01-21"] = "Patch 12.0.0 (pré-patch de Midnight)",
+	["2026-02-11"] = "Patch 12.0.1",
+	["2026-03-03"] = "Sortie de Midnight",
+	["2026-04-22"] = "Patch 12.0.5",
+	["2026-06-17"] = "Patch 12.0.7 « Révélations »",
+	["2026-08-12"] = "Patch 12.1.0 « La malédiction d'Ula'tek »",
+	["2026-08-19"] = "Saison 2 de Midnight",
+	["2026-10-14"] = "Patch 12.1.5 « La Promesse de demain »",
+}
+local PATCH_COLOR = "|cff40ff40"
+-- Table propre à Retail (WoW Forever a ses propres versions).
+local IS_RETAIL = (select(4, GetBuildInfo()) or 0) >= 100000
 local MONTHS = { "Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre",
 	"Octobre", "Novembre", "Décembre" }
 local WEEKDAYS = { "Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi" }
@@ -282,9 +298,6 @@ local function BuildItems()
 			days[#days + 1] = day
 		end
 	end
-	table.sort(days, function(a, b)
-		return a > b
-	end)
 	-- Totaux par année et par mois.
 	local totals = {}
 	for _, day in ipairs(days) do
@@ -292,6 +305,16 @@ local function BuildItems()
 		totals[day:sub(1, 4)] = (totals[day:sub(1, 4)] or 0) + n
 		totals[day:sub(1, 7)] = (totals[day:sub(1, 7)] or 0) + n
 	end
+	-- Jours de sortie d'un patch dans un mois affiché, même sans événement.
+	for day in pairs(IS_RETAIL and PATCHES or {}) do
+		if totals[day:sub(1, 7)] and #(lists[day] or {}) == 0 then
+			lists[day] = {}
+			days[#days + 1] = day
+		end
+	end
+	table.sort(days, function(a, b)
+		return a > b
+	end)
 	local durations = SessionDurations(ns.GetDays())
 	local items = {}
 	local year, month
@@ -312,7 +335,7 @@ local function BuildItems()
 				local list = lists[day]
 				items[#items + 1] = { header = 3, key = day,
 					label = WEEKDAYS[tonumber(date("%w", t)) + 1] .. " " .. tonumber(day:sub(9, 10)) .. " "
-						.. MONTHS[tonumber(day:sub(6, 7))]:lower(), count = #list }
+						.. MONTHS[tonumber(day:sub(6, 7))]:lower(), count = #list, patch = IS_RETAIL and PATCHES[day] or nil }
 				if IsOpen(day) then
 					for _, line in ipairs(DayLines(list, durations)) do
 						items[#items + 1] = line
@@ -330,15 +353,32 @@ local function FormatItem(item)
 	if item.header then
 		local mark = IsOpen(item.key) and "-" or "+"
 		local color = item.header == 3 and "|cffffffff" or "|cffffd200"
-		return INDENT[item.header] .. "|cff999999" .. mark .. "|r " .. color .. item.label .. "|r  |cff999999("
-			.. item.count .. ")|r"
+		if item.header == 3 and item.count == 0 then
+			mark = " " -- jour de patch sans événement : rien à déplier
+		end
+		local text = INDENT[item.header] .. "|cff999999" .. mark .. "|r " .. color .. item.label .. "|r"
+		if item.count > 0 then
+			text = text .. "  |cff999999(" .. item.count .. ")|r"
+		end
+		if item.patch then
+			text = text .. "  " .. PATCH_COLOR .. item.patch .. "|r"
+		end
+		return text
 	end
 	return "            |cff999999" .. date("%H:%M", item.time) .. "|r  " .. EventText(item)
 end
 
 local function ItemTooltip(item)
 	if item.header then
-		return { item.label, item.count .. " événement(s)", IsOpen(item.key) and "Clic : replier" or "Clic : déplier" }
+		local lines = { item.label }
+		if item.patch then
+			lines[#lines + 1] = PATCH_COLOR .. item.patch .. "|r (serveurs européens)"
+		end
+		lines[#lines + 1] = item.count .. " événement(s)"
+		if item.count > 0 then
+			lines[#lines + 1] = IsOpen(item.key) and "Clic : replier" or "Clic : déplier"
+		end
+		return lines
 	end
 	local lines = { date("%d/%m/%Y", item.time) }
 	for i, key in ipairs(item.keys) do

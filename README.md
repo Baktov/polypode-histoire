@@ -30,6 +30,10 @@ un mois ou un jour : le replier ou le déplier (par défaut, seuls l'année, le 
 cours sont dépliés ; vos choix sont gardés). Le bouton **Tout replier** / **Tout déplier** agit sur
 tout l'arbre. Le nombre d'événements est indiqué à droite de chaque année, mois et jour.
 
+Les jours de **sortie d'un patch** (date des serveurs européens) sont signalés **en vert** à droite
+du jour, avec le nom du patch (« Mercredi 14 octobre  Patch 12.1.5 « La Promesse de demain » »),
+même sans événement ce jour-là, dans les mois affichés (Retail seulement).
+
 **Filtres** (cases à gauche de la barre de titre, libellés abrégés, nom complet au survol) :
 **Con.** connexions, **H-F** hauts faits, **Gou.** gouffres, **Don.** donjons (avec les clés M+) et
 **Rai.** raids (entrées comprises). Aucune case cochée (par défaut) :
@@ -117,6 +121,7 @@ personnage = `nom-royaume`, jour = date locale. Types et champs :
 
 ## Version
 
+`1.6.0` : jours de sortie des patchs (Midnight) en vert avec leur nom, dans les mois affichés.
 `1.5.1` : filtres : libellés abrégés (Con., H-F, Gou., Don., Rai.), nom complet dans l'infobulle ; fenêtre moins large possible.
 `1.5.0` : filtres dans la barre de titre (connexions, hauts faits, gouffres, donjons, raids) ; aucun coché = tout le journal.
 `1.4.0` : événements d'un jour du plus récent au plus ancien ; entrée dans un gouffre, un donjon ou un raid notée, et durée affichée à la fin (gouffre, section, donjon, clé M+, boss de raid).

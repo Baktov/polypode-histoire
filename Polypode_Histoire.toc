@@ -2,7 +2,7 @@
 ## Title: Polypode Histoire
 ## Notes: Journal chronologique commun de tous les personnages joués : connexions, groupes d'équipe, gouffres, donjons, clés M+, boss de raid, hauts faits, niveaux, niveau d'objet.
 ## Author: Baktov
-## Version: 1.5.1
+## Version: 1.6.0
 ## Dependencies: Polypode
 ## SavedVariables: PolypodeHistoireData, PolypodeHistoireDB
 ## Category: Polypode
