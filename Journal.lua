@@ -17,11 +17,14 @@ local P = Polypode -- dépendance obligatoire (## Dependencies: Polypode), charg
 --   lvl  niveau       niveau atteint
 --   ach  id           haut fait obtenu (pas ceux déjà obtenus par le compte)
 --   ilvl nouveau~ancien  niveau d'objet équipé, sans décimales, quand il dépasse le plus haut connu
---   delve nom~palier~section  gouffre terminé (section : étape du scénario, pour les gouffres en
+--   enter nom~difficulté~genre  entrée dans un gouffre, un donjon ou un raid (genre : delve / party / raid)
+--   delve nom~palier~section~durée  gouffre terminé (section : étape du scénario, pour les gouffres en
 --                     plusieurs parties ; palier « 0 » dans les anciens événements = inconnu)
---   dng  nom~difficulté  donjon terminé (dernier boss du Journal des donjons vaincu, hors clé M+)
---   mplus nom~niveau~àTemps(1/0)~améliorations  clé mythique+ terminée
---   boss nom~difficulté~raid  boss de raid vaincu
+--   dng  nom~difficulté~durée  donjon terminé (dernier boss du Journal des donjons vaincu, hors clé M+)
+--   mplus nom~niveau~àTemps(1/0)~améliorations~durée  clé mythique+ terminée
+--   boss nom~difficulté~raid~durée  boss de raid vaincu
+--   durée : secondes depuis l'entrée, ou depuis le précédent gouffre / donjon / boss terminé dans la
+--   même instance (clé M+ : temps du chrono) ; vide si inconnue (absente des anciens événements).
 -- Messages : HIST:token:E:<événement> (nouvel événement), HIST:token:R:<événement> (retrait :
 -- déconnexion annulée, déco-reco ou session courte : seulement de son personnage),
 -- HIST:token:D:<événement> (supprimé à la main, clic droit : de n'importe quel client de l'équipe),
@@ -38,6 +41,8 @@ local SESSION_RESEND_MAX = 100 -- événements de la session renvoyés à un cli
 local GROUP_MERGE_DELAY = 2 -- secondes : regroupe les GROUP_ROSTER_UPDATE rapprochés
 local ILVL_DELAY = 3 -- secondes : regroupe les changements d'équipement
 local SHORT_DELAY = 180 -- secondes : déco-reco ou session plus courtes ne sont pas notées
+local REENTRY_DELAY = 900 -- secondes : retour dans la même instance (mort, sortie) sans nouvelle entrée
+local COMPLETION_KINDS = { delve = true, dng = true, mplus = true, boss = true }
 local DELVES_HEADER_WIDGET = Enum and Enum.UIWidgetVisualizationType
 	and Enum.UIWidgetVisualizationType.ScenarioHeaderDelves or 29 -- en-tête de scénario d'un gouffre
 
@@ -49,6 +54,8 @@ local count = 0 -- nombre d'événements
 local withdrawn = {} -- [événement] = "R" / "D", retirés pendant la session (renvoyés aux clients qui s'annoncent)
 local reloading -- /reload en cours : PLAYER_LOGOUT n'est pas une déconnexion
 local loginEvent, loginTime -- événement « in » de la session (nil si reconnexion rapide) et son heure
+local visit -- instance en cours : { id, name, start, last } (UpdateVisit) ; left / leftAt : celle qu'on vient de quitter
+local left, leftAt
 local delveState -- gouffre en cours : { tier, section } relevés pendant le scénario (UpdateDelveState)
 local loggedOut -- déconnexion traitée par Logout / Quit (annulée par CancelLogout) : événement « out »
 -- noté, "short" si la session était trop courte (connexion retirée, rien de noté), ou "skip" (idem,
@@ -346,6 +353,80 @@ local function IsLastDungeonBoss(encounterID)
 	return ok and last ~= nil and last == encounterID
 end
 
+-- INSTANCES : ENTRÉE ET DURÉE -------------------------------------------------------------------
+
+-- Instance où se trouve le personnage : identifiant « instanceID-difficulté », nom, difficulté et
+-- genre (delve / party / raid), ou nil hors gouffre, donjon et raid.
+local function CurrentInstance()
+	local name, instanceType, difficultyID, _, _, _, _, instanceID = GetInstanceInfo()
+	local kind
+	if difficultyID == 208 or (C_DelvesUI and C_DelvesUI.HasActiveDelve and C_DelvesUI.HasActiveDelve()) then
+		kind = "delve"
+	elseif instanceType == "party" or instanceType == "raid" then
+		kind = instanceType
+	end
+	if kind and name and not Secret(name) then
+		return { id = tostring(instanceID) .. "-" .. tostring(difficultyID), name = name, difficulty = difficultyID,
+			kind = kind }
+	end
+end
+
+-- Après un /reload dans l'instance : début et dernière fin retrouvés dans le journal (dernière
+-- entrée du personnage dans cette instance, aujourd'hui ou la veille).
+local function RestoreVisit(current)
+	local now, key = GetServerTime(), P.GetCharKey()
+	local start, last
+	for _, day in ipairs({ DayOf(now - 86400), DayOf(now) }) do
+		for _, event in ipairs(store.days[day] or {}) do
+			local time, eventKey, kind, fields = Parse(event)
+			if eventKey == key and kind == "enter" and fields[4] == current.name then
+				start, last = time, nil
+			elseif eventKey == key and start and COMPLETION_KINDS[kind] then
+				last = time
+			end
+		end
+	end
+	current.start, current.last = start, last
+	return current
+end
+
+-- À chaque PLAYER_ENTERING_WORLD : entrée notée en arrivant dans une nouvelle instance (pas au
+-- /reload, pas en y revenant moins de REENTRY_DELAY après l'avoir quittée).
+local function UpdateVisit(isReload)
+	local current = CurrentInstance()
+	if not current then
+		if visit then
+			left, leftAt = visit, GetServerTime()
+		end
+		visit = nil
+		return
+	end
+	if visit and visit.id == current.id then
+		return
+	end
+	if isReload then
+		visit = RestoreVisit(current)
+	elseif left and left.id == current.id and GetServerTime() - leftAt < REENTRY_DELAY then
+		visit = left
+	else
+		Record("enter", current.name, current.difficulty, current.kind)
+		current.start = GetServerTime()
+		visit = current
+	end
+	left = nil
+end
+
+-- Durée depuis l'entrée ou la précédente fin dans l'instance (secondes, "" si inconnue) ; la fin
+-- notée devient le départ de la suivante.
+local function Elapsed()
+	if not visit then
+		return ""
+	end
+	local now, from = GetServerTime(), visit.last or visit.start
+	visit.last = now
+	return from and (now - from) or ""
+end
+
 local function OnEncounterEnd(encounterID, encounterName, difficultyID, _, success)
 	if Secret(success) or success ~= 1 or Secret(encounterID) then
 		return
@@ -355,12 +436,12 @@ local function OnEncounterEnd(encounterID, encounterName, difficultyID, _, succe
 		encounterName = "?"
 	end
 	if instanceType == "raid" then
-		Record("boss", encounterName, difficultyID, instanceName)
+		Record("boss", encounterName, difficultyID, instanceName, Elapsed())
 	elseif instanceType == "party" then
 		local isChallenge = C_ChallengeMode and C_ChallengeMode.IsChallengeModeActive
 			and C_ChallengeMode.IsChallengeModeActive()
 		if not isChallenge and IsLastDungeonBoss(encounterID) then
-			Record("dng", instanceName, difficultyID)
+			Record("dng", instanceName, difficultyID, Elapsed())
 		end
 	end
 end
@@ -436,7 +517,7 @@ local function OnScenarioCompleted()
 	if section == name then
 		section = ""
 	end
-	Record("delve", name, tier, section)
+	Record("delve", name, tier, section, Elapsed())
 end
 
 local function OnChallengeCompleted()
@@ -448,8 +529,10 @@ local function OnChallengeCompleted()
 		return
 	end
 	local name = C_ChallengeMode.GetMapUIInfo and C_ChallengeMode.GetMapUIInfo(info.mapChallengeModeID)
+	local elapsed = Elapsed()
+	local timer = info.time and not Secret(info.time) and info.time > 0 and math.floor(info.time / 1000 + 0.5)
 	Record("mplus", name or info.mapChallengeModeID, info.level, info.onTime and 1 or 0,
-		info.keystoneUpgradeLevels or 0)
+		info.keystoneUpgradeLevels or 0, timer or elapsed)
 end
 
 -- Connexion : pas notée si le personnage s'est déconnecté il y a moins de SHORT_DELAY (sa
@@ -630,7 +713,7 @@ events:SetScript("OnEvent", function(_, event, ...)
 		return
 	end
 	if event == "PLAYER_ENTERING_WORLD" then
-		local isLogin = ...
+		local isLogin, isReload = ...
 		if isLogin then
 			OnLogin()
 			if size >= ns.WARN_SIZE then
@@ -643,6 +726,7 @@ events:SetScript("OnEvent", function(_, event, ...)
 		CheckTeams(true)
 		C_Timer.After(ILVL_DELAY, CheckItemLevel)
 		UpdateDelveState()
+		UpdateVisit(isReload)
 	elseif event == "PLAYER_LOGOUT" then
 		if not reloading and not loggedOut then
 			OnLogout()

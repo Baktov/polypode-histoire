@@ -6,7 +6,7 @@ local P = Polypode
 -- FENÊTRE « Histoire » (bouton de la barre de titre de Polypode, /poly histoire) : le journal de
 -- Journal.lua en arbre Année > Mois > Jour, du plus récent au plus ancien, chaque niveau replié ou
 -- déplié d'un clic (par défaut seuls l'année, le mois et le jour en cours sont dépliés ; choix
--- gardés dans PolypodeHistoireDB.open). Dans un jour, les événements dans l'ordre de l'heure ; les
+-- gardés dans PolypodeHistoireDB.open). Dans un jour, les événements du plus récent au plus ancien ; les
 -- événements identiques de plusieurs personnages à moins de MERGE_WINDOW secondes d'écart sont
 -- réunis en une ligne (« Mordsith, Darà terminent le gouffre... ») dont l'infobulle donne le
 -- détail. En-tête : nombre d'événements et taille du journal (orange au-delà de ns.WARN_SIZE,
@@ -14,6 +14,10 @@ local P = Polypode
 -- Clic droit sur une ligne d'événement : la supprimer du journal, après confirmation.
 
 local MERGE_WINDOW = 300 -- secondes
+-- Champ de la durée (secondes) des événements de fin d'instance ; il ne compte pas pour réunir
+-- les personnages d'une même ligne.
+local DURATION_FIELD = { delve = 7, dng = 6, mplus = 8, boss = 7 }
+local INSTANCE_KINDS = { delve = "le gouffre", party = "le donjon", raid = "le raid" }
 local MIN_WIDTH, MIN_HEIGHT = 420, 220
 local MONTHS = { "Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre",
 	"Octobre", "Novembre", "Décembre" }
@@ -140,6 +144,20 @@ local function EventText(line)
 		return plural and many or one
 	end
 	local kind = line.kind
+	-- Parenthèse finale : précisions non vides, puis la durée (du premier personnage de la ligne).
+	local function details(...)
+		local parts = {}
+		for i = 1, select("#", ...) do
+			local part = select(i, ...)
+			if part and part ~= "" then
+				parts[#parts + 1] = part
+			end
+		end
+		if DURATION_FIELD[kind] and line.durations[1] then
+			parts[#parts + 1] = DurationText(line.durations[1])
+		end
+		return #parts > 0 and (" (" .. table.concat(parts, ", ") .. ")") or ""
+	end
 	if kind == "in" then
 		return who .. " " .. verb("se connecte", "se connectent")
 	elseif kind == "out" then
@@ -155,34 +173,38 @@ local function EventText(line)
 		local gain = (tonumber(f[4]) or 0) - (tonumber(f[5]) or 0)
 		return who .. " " .. verb("passe", "passent") .. " au |cffffd200niveau d'objet " .. (f[4] or "?")
 			.. "|r |cff40ff40(+" .. gain .. ")|r"
+	elseif kind == "enter" then
+		local difficulty = f[6] ~= "delve" and DifficultyName(f[5])
+		return who .. " |cff999999" .. verb("entre", "entrent") .. " dans " .. (INSTANCE_KINDS[f[6]] or "l'instance")
+			.. "|r " .. Quoted(f[4]) .. (difficulty and (" |cff999999(" .. difficulty .. ")|r") or "")
 	elseif kind == "delve" then
 		-- Palier « 0 » : inconnu (anciens événements, lus dans les données du groupe à l'entrée).
-		local tier = f[5] and f[5] ~= "" and f[5] ~= "0" and (" (palier " .. f[5] .. ")") or ""
+		local tier = f[5] and f[5] ~= "" and f[5] ~= "0" and ("palier " .. f[5]) or nil
 		local section = f[6] and f[6] ~= "" and (" : " .. Quoted(f[6])) or ""
-		return who .. " " .. verb("termine", "terminent") .. " le gouffre " .. Quoted(f[4]) .. section .. tier
+		return who .. " " .. verb("termine", "terminent") .. " le gouffre " .. Quoted(f[4]) .. section .. details(tier)
 	elseif kind == "dng" then
-		local difficulty = DifficultyName(f[5])
-		return who .. " " .. verb("termine", "terminent") .. " le donjon " .. Quoted(f[4])
-			.. (difficulty and (" (" .. difficulty .. ")") or "")
+		return who .. " " .. verb("termine", "terminent") .. " le donjon " .. Quoted(f[4]) .. details(DifficultyName(f[5]))
 	elseif kind == "mplus" then
 		local timed = f[6] == "1" and "|cff40ff40dans les temps|r" or "|cffff4040hors temps|r"
 		return who .. " " .. verb("termine", "terminent") .. " la clé " .. Quoted(f[4]) .. " |cffffd200+"
-			.. (f[5] or "?") .. "|r (" .. timed .. ")"
+			.. (f[5] or "?") .. "|r" .. details(timed)
 	elseif kind == "boss" then
-		local difficulty = DifficultyName(f[5])
-		return who .. " " .. verb("vainc", "vainquent") .. " " .. Quoted(f[4]) .. " |cff999999(" .. (f[6] or "?")
-			.. (difficulty and (", " .. difficulty) or "") .. ")|r"
+		return who .. " " .. verb("vainc", "vainquent") .. " " .. Quoted(f[4]) .. " |cff999999"
+			.. details(f[6] or "?", DifficultyName(f[5])) .. "|r"
 	end
 	return who .. " : " .. kind
 end
 
--- Lignes d'un jour : événements dans l'ordre, ceux de même type et mêmes champs réunis s'ils sont
--- à moins de MERGE_WINDOW secondes d'écart et de personnages différents.
-local function DayLines(list, durations)
+-- Lignes d'un jour : événements de même type et mêmes champs (durée exceptée) réunis s'ils sont
+-- à moins de MERGE_WINDOW secondes d'écart et de personnages différents ; renvoyées du plus récent
+-- au plus ancien, comme les jours. durations : temps joué des « out » (SessionDurations).
+local function DayLines(list, sessions)
 	local lines, open = {}, {}
 	for _, event in ipairs(list) do
 		local time, key, kind, fields = ns.Parse(event)
-		local mergeKey = table.concat(fields, "~", 3)
+		local durationField = DURATION_FIELD[kind]
+		local mergeKey = table.concat(fields, "~", 3, durationField and math.min(#fields, durationField - 1) or #fields)
+		local duration = sessions[event] or (durationField and tonumber(fields[durationField]))
 		local line = open[mergeKey]
 		local already = false
 		for _, known in ipairs(line and line.keys or {}) do
@@ -192,16 +214,20 @@ local function DayLines(list, durations)
 			line.keys[#line.keys + 1] = key
 			line.times[#line.times + 1] = time
 			line.events[#line.events + 1] = event
-			line.durations[#line.keys] = durations[event]
+			line.durations[#line.keys] = duration
 			line.last = time
 		else
 			line = { event = true, kind = kind, fields = fields, time = time, last = time, keys = { key },
-				times = { time }, events = { event }, durations = { durations[event] } }
+				times = { time }, events = { event }, durations = { duration } }
 			lines[#lines + 1] = line
 			open[mergeKey] = line
 		end
 	end
-	return lines
+	local reversed = {}
+	for i = #lines, 1, -1 do
+		reversed[#reversed + 1] = lines[i]
+	end
+	return reversed
 end
 
 -- LISTE -------------------------------------------------------------------------------------------

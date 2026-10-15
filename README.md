@@ -36,13 +36,19 @@ Dans un jour, les événements sont dans l'ordre de l'heure :
 |---|---|
 | Connexion / déconnexion (avec le temps joué depuis la connexion) | 21:05 Mordsith se connecte · 23:10 Mordsith se déconnecte (2 h 05) |
 | Équipe groupée au complet (noté par son leader) | 21:07 L'équipe « Midnight » se groupe (5 personnages) |
-| Gouffre terminé (avec la section pour un gouffre en plusieurs parties) | 21:40 Mordsith, Darà terminent le gouffre « Le Puits » : « … » (palier 8) |
-| Donjon terminé (dernier boss) | 22:10 … terminent le donjon « … » (Héroïque) |
-| Clé mythique+ terminée | 22:45 … terminent la clé « … » +10 (dans les temps) |
-| Boss de raid vaincu | 23:20 … vainquent « … » (raid, difficulté) |
+| Entrée dans un gouffre, un donjon ou un raid | 21:15 Mordsith, Darà entrent dans le gouffre « Le Puits » |
+| Gouffre terminé (avec la section pour un gouffre en plusieurs parties) | 21:40 Mordsith, Darà terminent le gouffre « Le Puits » : « … » (palier 8, 25 min) |
+| Donjon terminé (dernier boss) | 22:10 … terminent le donjon « … » (Héroïque, 32 min) |
+| Clé mythique+ terminée (durée : temps du chrono) | 22:45 … terminent la clé « … » +10 (dans les temps, 28 min) |
+| Boss de raid vaincu | 23:20 … vainquent « … » (raid, difficulté, 12 min) |
 | Haut fait (**clic** : ouvrir la fenêtre des hauts faits du jeu sur lui) | Mordsith obtient le haut fait « … » |
 | Niveau | Darà atteint le niveau 90 |
 | Niveau d'objet (sans décimales, seulement quand il dépasse le plus haut connu) | Corwin passe au niveau d'objet 245 (+3) |
+
+La **durée** entre parenthèses part de l'entrée dans l'instance, ou de la fin précédente dans la même
+instance (section de gouffre, boss de raid précédent) ; revenir dans l'instance moins de 15 minutes
+après l'avoir quittée (mort, sortie) ne compte pas comme une nouvelle entrée. Dans un jour, les
+événements vont du **plus récent au plus ancien**, comme les jours.
 
 Le même événement vécu par plusieurs personnages à moins de 5 minutes d'écart tient sur **une
 ligne** ; **au survol**, l'heure exacte de chacun.
@@ -95,15 +101,17 @@ personnage = `nom-royaume`, jour = date locale. Types et champs :
 | `lvl` | niveau |
 | `ach` | identifiant du haut fait |
 | `ilvl` | nouveau niveau d'objet, ancien |
-| `delve` | nom du gouffre, palier (« 0 » dans les anciens événements : inconnu, non affiché), section |
-| `dng` | nom du donjon, identifiant de difficulté |
-| `mplus` | nom du donjon, niveau de la clé, dans les temps (1 / 0), améliorations de la clé |
-| `boss` | nom du boss, identifiant de difficulté, nom du raid |
+| `delve` | nom du gouffre, palier (« 0 » dans les anciens événements : inconnu, non affiché), section, durée (secondes) |
+| `enter` | nom de l'instance, identifiant de difficulté, genre (`delve` / `party` / `raid`) |
+| `dng` | nom du donjon, identifiant de difficulté, durée |
+| `mplus` | nom du donjon, niveau de la clé, dans les temps (1 / 0), améliorations de la clé, durée (chrono) |
+| `boss` | nom du boss, identifiant de difficulté, nom du raid, durée |
 
 ---
 
 ## Version
 
+`1.4.0` : événements d'un jour du plus récent au plus ancien ; entrée dans un gouffre, un donjon ou un raid notée, et durée affichée à la fin (gouffre, section, donjon, clé M+, boss de raid).
 `1.3.0` : temps joué affiché à la déconnexion ; hauts faits affichés par leur nom (et non plus leur numéro), clic pour les ouvrir dans la fenêtre des hauts faits ; gouffres : palier lu dans l'en-tête du scénario (il valait 0 en solo) et section terminée notée.
 `1.2.0` : clic droit sur une entrée pour la supprimer du journal (avec confirmation, synchronisé entre clients).
 `1.1.0` : déco-reco et sessions de moins de 3 minutes non notées dans le journal.
