@@ -1,6 +1,6 @@
 ## Interface: 120000, 16001
 ## Title: Polypode Histoire
-## Notes: Journal chronologique commun de tous les personnages joués : connexions, groupes d'équipe, gouffres, donjons, clés M+, boss de raid, hauts faits, niveaux, niveau d'objet.
+## Notes: Journal chronologique commun de tous les personnages joués : connexions, groupes d'équipe, gouffres, donjons, clés M+, boss de raid, hauts faits, collections, renom et réputation, niveaux, niveau d'objet.
 ## Author: Baktov
 ## Version: 1.8.0
 ## Dependencies: Polypode

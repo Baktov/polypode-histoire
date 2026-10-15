@@ -37,7 +37,7 @@ affiché, marqué « (à venir) » (Retail seulement). Case **Ext** à droite du
 non ces jours de patchs et d'extensions (cochée par défaut).
 
 **Filtres** (cases à gauche de la barre de titre, libellés abrégés, nom complet au survol) :
-**Con.** connexions, **H-F** hauts faits, **Gou.** gouffres, **Don.** donjons (avec les clés M+) et
+**Con.** connexions, **H-F** hauts faits, **Gou.** gouffres, **Don.** donjons (avec les clés M+),
 **Rai.** raids (entrées comprises), **Col.** collections (jouets, montures, mascottes) et **Rép.**
 renom et réputation. Aucune case cochée (par défaut) :
 tout le journal ; sinon, seuls les événements des catégories cochées, les jours sans événement
