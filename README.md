@@ -130,8 +130,14 @@ days = {
 		"1791745500~Mordsith-Elune~in",
 		"1791747600~Mordsith-Elune~delve~Le Puits~8",
 	},
-}
+},
+deleted = { -- journal seulement (1.11.0) : événements retirés, gardés 120 jours
+	["1791746000~Mordsith-Elune~ach~1234"] = "D:1791750000", -- supprimé à la main (clic droit)
+	["1791745400~Darà-Elune~in"] = "R:1791745500", -- retiré automatiquement (session trop courte)
+},
 ```
+
+Un logiciel qui garde son propre historique doit retirer les événements listés dans `deleted`.
 
 Chaque événement : `heure~personnage~type~champs`, heure = secondes depuis 1970 (heure serveur),
 personnage = `nom-royaume`, jour = date locale. Types et champs :
@@ -159,6 +165,7 @@ personnage = `nom-royaume`, jour = date locale. Types et champs :
 
 ## Version
 
+`1.11.0` : événements supprimés (clic droit) ou retirés automatiquement gardés 120 jours dans la sauvegarde (`deleted`), pour qu'un lecteur du fichier (site Histoire) les retire aussi ; un événement supprimé à la main ne peut plus revenir par un autre client.
 `1.10.2` : renom sans nom (compteur caché « Gouffres : conversion de fragments de clé de coffre », faction 2739) ni noté ni affiché.
 `1.10.1` : frise : infobulle d'une session « de 21:06 à 00:20 » (la flèche s'affichait en carré vide).
 `1.10.0` : vue **Frise** (boutons Liste / Frise) : axe horizontal jour, semaine, mois ou tout le journal, icônes, textes courts, infobulles, sessions de chaque personnage, patchs, importance des événements (bouton « ? »).

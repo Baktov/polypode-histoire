@@ -48,6 +48,10 @@ local DAY_OVERHEAD = 30 -- octets par jour (clé et accolades)
 ns.WARN_SIZE = 2 * 1024 * 1024 -- avertissement : export conseillé
 ns.ALERT_SIZE = 5 * 1024 * 1024 -- alerte (rouge)
 local SESSION_RESEND_MAX = 100 -- événements de la session renvoyés à un client qui s'annonce
+-- Événements retirés, gardés dans store.deleted ([événement] = "D:<heure>" suppression à la main,
+-- "R:<heure>" retrait automatique) pour qu'un lecteur du fichier (site Histoire, historique cumulé)
+-- les retire aussi ; oubliés au chargement après DELETED_KEEP secondes.
+local DELETED_KEEP = 120 * 86400
 local GROUP_MERGE_DELAY = 2 -- secondes : regroupe les GROUP_ROSTER_UPDATE rapprochés
 local ILVL_DELAY = 3 -- secondes : regroupe les changements d'équipement
 local SHORT_DELAY = 180 -- secondes : déco-reco ou session plus courtes ne sont pas notées
@@ -98,11 +102,19 @@ end
 
 -- STOCKAGE ----------------------------------------------------------------------------------------
 
--- Ajoute un événement à son jour (trié par heure) ; faux si doublon, mal formé ou antérieur au
--- dernier export.
-local function Insert(event)
+-- Ajoute un événement à son jour (trié par heure) ; faux si doublon, mal formé, antérieur au
+-- dernier export ou supprimé à la main. Retiré automatiquement (« R ») : refusé, sauf restore
+-- (événement renvoyé par son personnage ou déconnexion annulée), qui efface la trace du retrait.
+local function Insert(event, restore)
 	if seen[event] then
 		return false
+	end
+	local deleted = store.deleted and store.deleted[event]
+	if deleted then
+		if deleted:sub(1, 1) == "D" or not restore then
+			return false
+		end
+		store.deleted[event] = nil
 	end
 	local time, key, kind = Parse(event)
 	if not time or not key or not kind then
@@ -195,10 +207,19 @@ local function Record(kind, ...)
 	return event
 end
 
+-- Garde la trace d'un événement retiré (kind "D" ou "R" ; une suppression à la main l'emporte).
+local function MarkDeleted(event, kind)
+	local known = store.deleted[event]
+	if kind == "D" or not known then
+		store.deleted[event] = kind .. ":" .. GetServerTime()
+	end
+end
+
 -- Retire un événement du personnage joué, ici et chez les clients connectés (renvoyé à ceux qui
 -- s'annoncent ensuite).
 local function Withdraw(event)
 	Remove(event)
+	MarkDeleted(event, "R")
 	withdrawn[event] = withdrawn[event] or "R"
 	Send("R", event)
 	Refresh()
@@ -208,6 +229,7 @@ end
 function ns.Delete(list)
 	for _, event in ipairs(list) do
 		Remove(event)
+		MarkDeleted(event, "D")
 		withdrawn[event] = "D"
 		Send("D", event)
 	end
@@ -247,6 +269,7 @@ local function OnMessage(rest, sender)
 			Remove(payload)
 			Refresh()
 		end
+		MarkDeleted(payload, "D")
 		withdrawn[payload] = "D"
 		return
 	end
@@ -256,11 +279,13 @@ local function OnMessage(rest, sender)
 		return
 	end
 	if kind == "E" then
-		if Insert(payload) then
+		-- Renvoyé par son personnage : un retrait automatique noté ici est annulé.
+		if Insert(payload, true) then
 			Refresh()
 		end
 	elseif kind == "R" then
 		Remove(payload)
+		MarkDeleted(payload, "R")
 		Refresh()
 	end
 end
@@ -594,7 +619,7 @@ local function OnLogoutCancelled()
 	if loggedOut == "short" then
 		-- Session courte : la connexion retirée est remise.
 		withdrawn[loginEvent] = nil
-		if Insert(loginEvent) then
+		if Insert(loginEvent, true) then
 			Send("E", loginEvent)
 			Refresh()
 		end
@@ -970,6 +995,15 @@ events:SetScript("OnEvent", function(_, event, ...)
 			store.format = FORMAT
 			store.days = store.days or {}
 			store.ilvl = store.ilvl or {}
+			store.deleted = store.deleted or {}
+			-- Traces de retrait trop anciennes (ou illisibles) oubliées.
+			local oldest = GetServerTime() - DELETED_KEEP
+			for text, mark in pairs(store.deleted) do
+				local at = type(mark) == "string" and tonumber(mark:match("^[DR]:(%d+)$"))
+				if not at or at < oldest then
+					store.deleted[text] = nil
+				end
+			end
 			Reindex()
 		end
 		return
