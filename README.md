@@ -55,7 +55,7 @@ journal sur un axe horizontal :
   « +12 … », « Gouffre 11 ») quand la place le permet ; les événements trop proches sont regroupés
   en une icône avec un compteur. **Survol** : le détail (heure de chaque personnage, texte complet) ;
   **clic** : ce jour dans la liste.
-- **Une piste par personnage** : ses sessions de jeu à la couleur de sa classe (survol : début, fin,
+- **Une piste par personnage** : ses sessions de jeu à la couleur de sa classe (survol : « de 21:06 à 00:20 »,
   durée), avec le temps joué sur la période à côté du nom.
 - **Sorties de patchs** (Retail, case **Ext**) : trait vert et icône bordée de vert.
 - **Importance** (bouton **?**) : plus la période est longue, moins on montre de détails. Poids :
@@ -159,6 +159,7 @@ personnage = `nom-royaume`, jour = date locale. Types et champs :
 
 ## Version
 
+`1.10.1` : frise : infobulle d'une session « de 21:06 à 00:20 » (la flèche s'affichait en carré vide).
 `1.10.0` : vue **Frise** (boutons Liste / Frise) : axe horizontal jour, semaine, mois ou tout le journal, icônes, textes courts, infobulles, sessions de chaque personnage, patchs, importance des événements (bouton « ? »).
 `1.9.1` : cases de filtre et case « Ext » déplacées en bas de la fenêtre ; titre de nouveau centré.
 `1.9.0` : social : amis (du personnage et Battle.net) ajoutés ou retirés, guildes et communautés rejointes ou quittées ; filtre « Soc. ».

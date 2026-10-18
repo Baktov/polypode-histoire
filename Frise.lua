@@ -452,7 +452,8 @@ local function BarTooltip(self)
 	end
 	GameTooltip:SetOwner(self, "ANCHOR_BOTTOM")
 	GameTooltip:AddLine(H.CharName(s.key))
-	GameTooltip:AddLine(date("%d/%m ", s.start) .. TimeLabel(s.start) .. " → " .. TimeLabel(s.stop)
+	-- Pas de flèche « → » : absente de la police du jeu (carré vide).
+	GameTooltip:AddLine(date("%d/%m", s.start) .. ", de " .. TimeLabel(s.start) .. " à " .. TimeLabel(s.stop)
 		.. (s.open and " (fin non notée)" or "") .. " · " .. H.DurationText(s.stop - s.start), 1, 1, 1)
 	H.ShowTooltip()
 end
