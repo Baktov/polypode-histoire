@@ -85,17 +85,25 @@ local function EventCategory(event)
 	return CATEGORY_OF_KIND[kind]
 end
 
--- Événements d'un jour retenus par les filtres (la liste elle-même si aucun n'est coché).
+-- Événement à ignorer : renom sans nom (compteur technique caché, ex. 2739 « Gouffres : conversion
+-- de fragments de clé de coffre », noté avant la 1.10.2).
+local function IsNoise(event)
+	local _, _, kind, fields = ns.Parse(event)
+	return kind == "renown" and (fields[6] or "") == ""
+end
+
+-- Événements d'un jour retenus par les filtres (tous si aucun n'est coché), sans les événements à
+-- ignorer.
 local function Filtered(list)
 	local filters = Settings().filters
-	if not next(filters) then
-		return list
-	end
+	local any = next(filters) ~= nil
 	local kept = {}
 	for _, event in ipairs(list) do
-		local category = EventCategory(event)
-		if category and filters[category] then
-			kept[#kept + 1] = event
+		if not IsNoise(event) then
+			local category = any and EventCategory(event)
+			if not any or (category and filters[category]) then
+				kept[#kept + 1] = event
+			end
 		end
 	end
 	return kept

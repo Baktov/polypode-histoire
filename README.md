@@ -159,6 +159,7 @@ personnage = `nom-royaume`, jour = date locale. Types et champs :
 
 ## Version
 
+`1.10.2` : renom sans nom (compteur caché « Gouffres : conversion de fragments de clé de coffre », faction 2739) ni noté ni affiché.
 `1.10.1` : frise : infobulle d'une session « de 21:06 à 00:20 » (la flèche s'affichait en carré vide).
 `1.10.0` : vue **Frise** (boutons Liste / Frise) : axe horizontal jour, semaine, mois ou tout le journal, icônes, textes courts, infobulles, sessions de chaque personnage, patchs, importance des événements (bouton « ? »).
 `1.9.1` : cases de filtre et case « Ext » déplacées en bas de la fenêtre ; titre de nouveau centré.

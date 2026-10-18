@@ -728,7 +728,12 @@ local function OnRenownChanged(factionID, newLevel, oldLevel)
 		return
 	end
 	local data = C_MajorFactions and C_MajorFactions.GetMajorFactionData and C_MajorFactions.GetMajorFactionData(factionID)
-	Record("renown", factionID, newLevel, data and data.name or "")
+	-- Renom sans nom : compteur technique caché (ex. 2739 « Gouffres : conversion de fragments de clé
+	-- de coffre ») : pas noté.
+	if not data or not data.name or Secret(data.name) or data.name == "" then
+		return
+	end
+	Record("renown", factionID, newLevel, data.name)
 end
 
 -- Rang d'une réputation (hors factions majeures, suivies par leur renom) : numéro et texte, ou nil.
