@@ -70,6 +70,9 @@ local function Settings()
 	if PolypodeHistoireDB.showPatches == nil then
 		PolypodeHistoireDB.showPatches = true
 	end
+	if PolypodeHistoireDB.view ~= "frise" then
+		PolypodeHistoireDB.view = "liste"
+	end
 	return PolypodeHistoireDB
 end
 
@@ -692,6 +695,33 @@ local function Build()
 	listPanel.header:SetPoint("TOPLEFT", 10, -8)
 	listPanel.header:SetPoint("RIGHT", collapseBtn, "LEFT", -6, 0)
 
+	-- Vues « Liste » / « Frise » (boutons en haut à gauche, choix gardé dans PolypodeHistoireDB.view) :
+	-- la frise (Frise.lua) prend la place de la liste ; filtres et case « Ext » communs aux deux.
+	frame.viewButtons = {}
+	local previousView
+	for _, view in ipairs({ { key = "liste", label = "Liste", tip = "Journal en arbre Année > Mois > Jour." },
+		{ key = "frise", label = "Frise", tip = "Frise chronologique horizontale : jour, semaine, mois ou tout le "
+			.. "journal ; icônes, infobulles, sessions de chaque personnage." } }) do
+		local button = MakeButton(frame, view.label, 50, function()
+			Settings().view = view.key
+			ns.Refresh()
+		end, view.tip)
+		if previousView then
+			button:SetPoint("LEFT", previousView, "RIGHT", 2, 0)
+		else
+			button:SetPoint("TOPLEFT", 12, -12)
+		end
+		button.view = view.key
+		frame.viewButtons[#frame.viewButtons + 1] = button
+		previousView = button
+	end
+	if ns.BuildFrise then
+		frame.frisePanel = ns.BuildFrise(frame)
+		frame.frisePanel:SetPoint("TOPLEFT", 12, -36)
+		frame.frisePanel:SetPoint("BOTTOMRIGHT", -12, 34)
+		frame.frisePanel:Hide()
+	end
+
 	-- Poignée de redimensionnement (taille gardée).
 	local grip = CreateFrame("Button", nil, frame)
 	grip:SetSize(16, 16)
@@ -717,11 +747,29 @@ local function Build()
 	end
 end
 
--- Remplit la liste, si la fenêtre est ouverte.
+-- Remplit la liste (ou la frise, selon la vue), si la fenêtre est ouverte.
 function ns.Refresh()
 	if not frame or not frame:IsShown() then
 		return
 	end
+	local frise = Settings().view == "frise" and frame.frisePanel
+	for _, button in ipairs(frame.viewButtons) do
+		if button.view == (frise and "frise" or "liste") then
+			button:LockHighlight()
+		else
+			button:UnlockHighlight()
+		end
+	end
+	if frise then
+		listPanel:Hide()
+		frame.frisePanel:Show()
+		ns.RefreshFrise()
+		return
+	end
+	if frame.frisePanel then
+		frame.frisePanel:Hide()
+	end
+	listPanel:Show()
 	local items = BuildItems()
 	frame.items = items
 	local anyOpen = false
@@ -749,6 +797,33 @@ function P.ToggleHistoire()
 		ns.Refresh()
 	end
 end
+
+-- Montre un jour dans la liste (clic sur une icône de la frise) : vue Liste, année, mois et jour
+-- dépliés.
+local function OpenDay(day)
+	local settings = Settings()
+	settings.view = "liste"
+	settings.open[day:sub(1, 4)], settings.open[day:sub(1, 7)], settings.open[day] = true, true, true
+	ns.Refresh()
+end
+
+-- Outils partagés avec Frise.lua (chargé après ce fichier).
+ns.H = {
+	Settings = Settings,
+	Filtered = Filtered,
+	EventText = EventText,
+	DayLines = DayLines,
+	SessionDurations = SessionDurations,
+	CharName = CharName,
+	DurationText = DurationText,
+	ShowTooltip = ShowTooltip,
+	MakeButton = MakeButton,
+	OpenDay = OpenDay,
+	PATCHES = PATCHES,
+	IS_RETAIL = IS_RETAIL,
+	MONTHS = MONTHS,
+	WEEKDAYS = WEEKDAYS,
+}
 
 -- INTÉGRATION À POLYPODE --------------------------------------------------------------------------
 

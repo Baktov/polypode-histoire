@@ -43,6 +43,30 @@ renom et réputation et **Soc.** social (amis, guildes, communautés). Aucune ca
 tout le journal ; sinon, seuls les événements des catégories cochées, les jours sans événement
 retenu étant masqués. Le choix est gardé.
 
+### Frise
+
+Boutons **Liste** / **Frise** en haut à gauche de la fenêtre (choix gardé). La **frise** montre le
+journal sur un axe horizontal :
+
+- **Échelles** (boutons en haut à droite) : **Jour** (cadré sur la plage jouée), **Semaine** (du
+  lundi au dimanche), **Mois**, **Tous** (tout le journal en cours) ; **<** et **>** : période
+  précédente ou suivante.
+- **Piste des événements** : une icône du jeu par événement, avec un texte court (« Niv. 84 »,
+  « +12 … », « Gouffre 11 ») quand la place le permet ; les événements trop proches sont regroupés
+  en une icône avec un compteur. **Survol** : le détail (heure de chaque personnage, texte complet) ;
+  **clic** : ce jour dans la liste.
+- **Une piste par personnage** : ses sessions de jeu à la couleur de sa classe (survol : début, fin,
+  durée), avec le temps joué sur la période à côté du nom.
+- **Sorties de patchs** (Retail, case **Ext**) : trait vert et icône bordée de vert.
+- **Importance** (bouton **?**) : plus la période est longue, moins on montre de détails. Poids :
+  3 boss de raid, clé M+, niveau, monture ; 2 haut fait, donjon, renom, guilde ; 1 gouffre, jouet,
+  mascotte, réputation, niveau d'objet, amis, communautés, équipe ; 0 entrée d'instance. Seuil :
+  Jour 0, Semaine 1, Mois 2, Tous 3. **Une catégorie cochée en bas de la fenêtre prend la main** :
+  tous ses événements sont montrés, quelle que soit l'échelle.
+- La frise suit la **largeur de la fenêtre** (poignée en bas à droite) : le regroupement se refait.
+
+Même vue que la frise du site Histoire ; ici, les journées s'arrêtent à minuit (comme la liste).
+
 Dans un jour, les événements sont dans l'ordre de l'heure :
 
 | Événement | Exemple |
@@ -135,6 +159,7 @@ personnage = `nom-royaume`, jour = date locale. Types et champs :
 
 ## Version
 
+`1.10.0` : vue **Frise** (boutons Liste / Frise) : axe horizontal jour, semaine, mois ou tout le journal, icônes, textes courts, infobulles, sessions de chaque personnage, patchs, importance des événements (bouton « ? »).
 `1.9.1` : cases de filtre et case « Ext » déplacées en bas de la fenêtre ; titre de nouveau centré.
 `1.9.0` : social : amis (du personnage et Battle.net) ajoutés ou retirés, guildes et communautés rejointes ou quittées ; filtre « Soc. ».
 `1.8.0` : jouets, montures et mascottes obtenus ; paliers de renom et rangs de réputation atteints ; filtres « Col. » et « Rép. ». Nouveau fichier de sauvegarde par personnage (`PolypodeHistoireChar`) : redémarrer le jeu (un /reload ne suffit pas).
