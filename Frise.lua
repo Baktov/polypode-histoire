@@ -6,7 +6,8 @@ local P = Polypode
 -- VUE « Frise » de la fenêtre Histoire (boutons Liste / Frise en haut à gauche) : axe horizontal
 -- sur une période (Jour : cadré sur la plage jouée ; Semaine : du lundi au dimanche ; Mois ; Tous :
 -- tout le journal), piste des événements (icône, texte court, infobulle détaillée, clic : le jour
--- dans la liste) et une piste de sessions par personnage (couleur de classe). Mêmes règles que le
+-- dans la liste) et une piste de sessions par personnage (couleur de classe). Clic ailleurs sur la
+-- frise (zones, barres) : en Mois, la semaine cliquée ; en Semaine, le jour cliqué. Mêmes règles que le
 -- site Histoire (src/timeline.js) : plus la période est longue, moins on montre de détails (poids
 -- WEIGHT, seuil MIN_WEIGHT) ; une catégorie cochée en bas de la fenêtre montre tous ses
 -- événements ; événements voisins à moins de CLUSTER_PX regroupés (compteur, icône et texte du
@@ -65,6 +66,7 @@ local panel, area, track, periodText, emptyText
 local scaleButtons = {}
 local state = { scale = "semaine" } -- anchor : jour d'ancrage de la période (nil : dernier jour joué)
 local renderPending
+local currentZones = {} -- zones cliquables du dernier rendu (BuildModel)
 
 -- DATES -------------------------------------------------------------------------------------------
 
@@ -361,6 +363,26 @@ local function BuildModel(width)
 		end
 	end
 
+	-- Zones cliquables : Mois → une par semaine (lundi à dimanche, rognée au mois) ; Semaine → une
+	-- par jour. Clic : cette semaine, ce jour.
+	local zones = {}
+	if state.scale == "semaine" or state.scale == "mois" then
+		local day = period.startKey
+		while day < period.endKey do
+			local stopKey = AddDays(day, 1)
+			if state.scale == "mois" then
+				stopKey = AddDays(day, 7 - (Weekday(day) + 6) % 7) -- lundi suivant
+				if stopKey > period.endKey then
+					stopKey = period.endKey
+				end
+			end
+			local x1, x2 = x(DayStart(day)), x(DayStart(stopKey))
+			zones[#zones + 1] = { day = day, last = AddDays(stopKey, -1), x = x1, w = x2 - x1,
+				scale = state.scale == "mois" and "semaine" or "jour" }
+			day = stopKey
+		end
+	end
+
 	local patches = {}
 	if H.IS_RETAIL and settings.showPatches then
 		for day, name in pairs(H.PATCHES) do
@@ -370,7 +392,8 @@ local function BuildModel(width)
 		end
 	end
 
-	return { period = period, clusters = clusters, lanes = lanes, ticks = ticks, patches = patches, count = #items }
+	return { period = period, clusters = clusters, lanes = lanes, ticks = ticks, patches = patches, zones = zones,
+		count = #items }
 end
 
 -- RECYCLAGE DES ÉLÉMENTS --------------------------------------------------------------------------
@@ -455,6 +478,43 @@ local function BarTooltip(self)
 	-- Pas de flèche « → » : absente de la police du jeu (carré vide).
 	GameTooltip:AddLine(date("%d/%m", s.start) .. ", de " .. TimeLabel(s.start) .. " à " .. TimeLabel(s.stop)
 		.. (s.open and " (fin non notée)" or "") .. " · " .. H.DurationText(s.stop - s.start), 1, 1, 1)
+	if #currentZones > 0 then
+		GameTooltip:AddLine(state.scale == "mois" and "Clic : afficher cette semaine" or "Clic : afficher ce jour",
+			0.7, 0.7, 0.7)
+	end
+	H.ShowTooltip()
+end
+
+-- Zones (semaines du mois, jours de la semaine, currentZones) : clic → la frise sur cette semaine
+-- ou ce jour.
+local function ZoomTo(zone)
+	state.scale, state.anchor = zone.scale, zone.day
+	ns.RefreshFrise()
+end
+
+-- Zone sous le curseur (clic sur une barre de session, posée par-dessus les zones).
+local function ZoneAtCursor()
+	local left = track:GetLeft()
+	if not left then
+		return
+	end
+	local cx = GetCursorPosition() / track:GetEffectiveScale() - left
+	for _, zone in ipairs(currentZones) do
+		if cx >= zone.x and cx < zone.x + zone.w then
+			return zone
+		end
+	end
+end
+
+local function ZoneTooltip(self)
+	local zone = self.zone
+	if not zone then
+		return
+	end
+	GameTooltip:SetOwner(self, "ANCHOR_CURSOR")
+	GameTooltip:AddLine(PeriodLabel(zone.scale, Period(zone.scale, zone.day)))
+	GameTooltip:AddLine(zone.scale == "jour" and "Clic : afficher ce jour" or "Clic : afficher cette semaine",
+		0.7, 0.7, 0.7)
 	H.ShowTooltip()
 end
 
@@ -530,7 +590,27 @@ local function CreateBar()
 	bar.fill:SetAllPoints()
 	bar:SetScript("OnEnter", BarTooltip)
 	bar:SetScript("OnLeave", GameTooltip_Hide)
+	bar:SetScript("OnClick", function()
+		local zone = ZoneAtCursor()
+		if zone then
+			ZoomTo(zone)
+		end
+	end)
 	return bar
+end
+
+local function CreateZone()
+	local button = CreateFrame("Button", nil, track)
+	button:SetHighlightTexture("Interface\\Buttons\\WHITE8X8")
+	button:GetHighlightTexture():SetVertexColor(1, 1, 1, 0.06)
+	button:SetScript("OnEnter", ZoneTooltip)
+	button:SetScript("OnLeave", GameTooltip_Hide)
+	button:SetScript("OnClick", function(self)
+		if self.zone then
+			ZoomTo(self.zone)
+		end
+	end)
+	return button
 end
 
 local function CreatePatchMark()
@@ -567,6 +647,7 @@ local function Render()
 	ReleaseAll()
 	local markers, bars = Pool("marker", CreateMarker), Pool("bar", CreateBar)
 	local marks, lines, texts = Pool("patch", CreatePatchMark), Pool("line", CreateLine), Pool("text", CreateText)
+	local zones = Pool("zone", CreateZone)
 
 	-- Colonne des noms : largeur du nom le plus long (nom et temps joué sur une ligne).
 	local probe = Acquire(texts)
@@ -580,6 +661,7 @@ local function Render()
 	probe:Hide()
 	local trackWidth = math.max(width - nameWidth - 8, 50)
 	model = BuildModel(trackWidth)
+	currentZones = model.zones
 
 	periodText:SetText(PeriodLabel(state.scale, model.period))
 	for _, button in ipairs(scaleButtons) do
@@ -635,6 +717,15 @@ local function Render()
 			text:SetText("|cff999999" .. tick.label .. "|r")
 		end
 	end
+	-- Zones cliquables (semaines du mois, jours de la semaine), sous les icônes et les barres.
+	for _, zone in ipairs(model.zones) do
+		local button = Acquire(zones)
+		button.zone = zone
+		button:ClearAllPoints()
+		button:SetPoint("TOPLEFT", track, "TOPLEFT", zone.x, -strip)
+		button:SetSize(math.max(zone.w, 1), axisTop + AXIS_H - strip)
+		button:SetFrameLevel(track:GetFrameLevel() + 1)
+	end
 	-- Séparateurs horizontaux des pistes.
 	for i = 0, #model.lanes do
 		local line = Acquire(lines)
@@ -655,6 +746,7 @@ local function Render()
 		mark.patch = patch
 		mark:ClearAllPoints()
 		mark:SetPoint("TOP", track, "TOPLEFT", patch.x, -2)
+		mark:SetFrameLevel(track:GetFrameLevel() + 2)
 	end
 
 	-- Événements.
@@ -693,6 +785,7 @@ local function Render()
 			bar:ClearAllPoints()
 			bar:SetPoint("TOPLEFT", track, "TOPLEFT", b.x, -(y + 3))
 			bar:SetSize(b.w, math.max(laneH - 6, 3))
+			bar:SetFrameLevel(track:GetFrameLevel() + 2)
 			bar.fill:SetColorTexture(color and color.r or 0.9, color and color.g or 0.7, color and color.b or 0.2,
 				b.session.open and 0.45 or 0.9)
 		end

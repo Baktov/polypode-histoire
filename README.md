@@ -55,6 +55,8 @@ journal sur un axe horizontal :
   « +12 … », « Gouffre 11 ») quand la place le permet ; les événements trop proches sont regroupés
   en une icône avec un compteur. **Survol** : le détail (heure de chaque personnage, texte complet) ;
   **clic** : ce jour dans la liste.
+- **Clic ailleurs sur la frise** (zone éclairée au survol, barres de session comprises) : en
+  **Mois**, la semaine cliquée s'affiche ; en **Semaine**, le jour cliqué.
 - **Une piste par personnage** : ses sessions de jeu à la couleur de sa classe (survol : « de 21:06 à 00:20 »,
   durée), avec le temps joué sur la période à côté du nom.
 - **Sorties de patchs** (Retail, case **Ext**) : trait vert et icône bordée de vert.
@@ -165,6 +167,7 @@ personnage = `nom-royaume`, jour = date locale. Types et champs :
 
 ## Version
 
+`1.12.0` : frise : clic sur une semaine (vue Mois) ou un jour (vue Semaine) pour l'afficher.
 `1.11.0` : événements supprimés (clic droit) ou retirés automatiquement gardés 120 jours dans la sauvegarde (`deleted`), pour qu'un lecteur du fichier (site Histoire) les retire aussi ; un événement supprimé à la main ne peut plus revenir par un autre client.
 `1.10.2` : renom sans nom (compteur caché « Gouffres : conversion de fragments de clé de coffre », faction 2739) ni noté ni affiché.
 `1.10.1` : frise : infobulle d'une session « de 21:06 à 00:20 » (la flèche s'affichait en carré vide).
