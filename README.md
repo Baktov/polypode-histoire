@@ -12,11 +12,14 @@ Nécessite **Polypode**.
 ## Installation
 
 1. Installer d'abord **Polypode** (dépendance obligatoire).
-2. Placer le dossier `Polypode_Histoire` dans `World of Warcraft/_retail_/Interface/AddOns/`
-   (et dans `_forever_/Interface/AddOns/` pour WoW Forever).
-3. Placer **aussi** son sous-dossier `Polypode_Histoire_Archive` directement dans
-   `Interface/AddOns/` (WoW ne lit pas un addon rangé dans un autre ; une jonction `mklink /J`
-   convient).
+2. Télécharger **`Polypode_Histoire-<version>.zip`** de la
+   [dernière version](https://github.com/Baktov/polypode-histoire/releases/latest) (pas « Source
+   code ») et le décompresser dans `World of Warcraft/_retail_/Interface/AddOns/` (et dans
+   `_forever_/Interface/AddOns/` pour WoW Forever) : il contient directement les deux dossiers,
+   `Polypode_Histoire` et `Polypode_Histoire_Archive`, à garder tels quels.
+3. Depuis les sources (dépôt git) : placer **aussi** le sous-dossier `Polypode_Histoire_Archive`
+   directement dans `Interface/AddOns/` (WoW ne lit pas un addon rangé dans un autre ; une
+   jonction `mklink /J` convient).
 4. Cocher « Polypode Histoire » et « Polypode Histoire Archive » dans la liste des AddOns, **sur
    chaque personnage** : chacun note ses propres événements et les partage avec les autres.
 
