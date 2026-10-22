@@ -13,7 +13,7 @@ Nécessite **Polypode**.
 
 1. Installer d'abord **Polypode** (dépendance obligatoire).
 2. Placer le dossier `Polypode_Histoire` dans `World of Warcraft/_retail_/Interface/AddOns/`
-   (et dans `_classic_beta_/Interface/AddOns/` pour WoW Forever).
+   (et dans `_forever_/Interface/AddOns/` pour WoW Forever).
 3. Placer **aussi** son sous-dossier `Polypode_Histoire_Archive` directement dans
    `Interface/AddOns/` (WoW ne lit pas un addon rangé dans un autre ; une jonction `mklink /J`
    convient).
