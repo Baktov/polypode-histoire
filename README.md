@@ -168,8 +168,22 @@ personnage = `nom-royaume`, jour = date locale. Types et champs :
 
 ---
 
+## Langues (Languages)
+
+Polypode Histoire s'affiche dans la langue choisie dans Polypode (option « Langue / Language », `/poly langue`),
+par défaut celle du jeu : français, anglais, allemand, espagnol, italien ou portugais du Brésil
+(anglais pour une autre langue). Nécessite Polypode 2.9 pour choisir la langue ; avec un Polypode plus
+ancien, le module reste en français. La commande `C:/Program Files/Git/poly histoire` garde son nom.
+
+*Polypode Histoire follows the language chosen in Polypode ("Langue / Language" option, `/poly language`), by
+default the game's: French, English, German, Spanish, Italian or Brazilian Portuguese (English for any
+other language).*
+
+---
+
 ## Version
 
+`1.13.0` : Polypode Histoire en anglais, allemand, espagnol, italien et portugais du Brésil, selon la langue choisie dans Polypode (History, Chronik, Historia, Storia, Histórico) ; tout le journal, anciens événements compris, s'écrit dans la langue choisie (phrases construites à l'affichage). *Translated into English, German, Spanish, Italian and Brazilian Portuguese.*
 `1.12.0` : frise : clic sur une semaine (vue Mois) ou un jour (vue Semaine) pour l'afficher.
 `1.11.0` : événements supprimés (clic droit) ou retirés automatiquement gardés 120 jours dans la sauvegarde (`deleted`), pour qu'un lecteur du fichier (site Histoire) les retire aussi ; un événement supprimé à la main ne peut plus revenir par un autre client.
 `1.10.2` : renom sans nom (compteur caché « Gouffres : conversion de fragments de clé de coffre », faction 2739) ni noté ni affiché.

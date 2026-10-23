@@ -1,13 +1,27 @@
 ## Interface: 120000, 16001
 ## Title: Polypode Histoire
-## Notes: Journal chronologique commun de tous les personnages joués : connexions, groupes d'équipe, gouffres, donjons, clés M+, boss de raid, hauts faits, collections, renom et réputation, amis, guildes et communautés, niveaux, niveau d'objet.
+## Title-enUS: Polypode History
+## Title-enGB: Polypode History
+## Title-deDE: Polypode Chronik
+## Title-esES: Polypode Historia
+## Title-esMX: Polypode Historia
+## Title-itIT: Polypode Storia
+## Title-ptBR: Polypode Histórico
+## Notes: Shared chronological journal of all the characters played: logins, team groups, delves, dungeons, M+ keys, raid bosses, achievements, collections, renown and reputation, friends, guilds and communities, levels, item level.
+## Notes-frFR: Journal chronologique commun de tous les personnages joués : connexions, groupes d'équipe, gouffres, donjons, clés M+, boss de raid, hauts faits, collections, renom et réputation, amis, guildes et communautés, niveaux, niveau d'objet.
 ## Author: Baktov
-## Version: 1.12.0
+## Version: 1.13.0
 ## Dependencies: Polypode
 ## SavedVariables: PolypodeHistoireData, PolypodeHistoireDB
 ## SavedVariablesPerCharacter: PolypodeHistoireChar
 ## Category: Polypode
 
+Locale.lua
+Locales/enUS.lua
+Locales/deDE.lua
+Locales/esES.lua
+Locales/itIT.lua
+Locales/ptBR.lua
 Journal.lua
 Histoire.lua
 Frise.lua

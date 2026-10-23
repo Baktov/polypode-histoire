@@ -2,6 +2,7 @@
 
 local _, ns = ...
 local P = Polypode -- dépendance obligatoire (## Dependencies: Polypode), chargée avant nous
+local L = ns.L
 
 -- JOURNAL COMMUN : chaque client note les événements de SON personnage, les envoie aux clients
 -- connectés (message HIST) et garde aussi ceux qu'il reçoit ; tous les clients tiennent donc le
@@ -660,12 +661,12 @@ end
 function ns.Export()
 	local days, events, cutoff = ns.ExportableDays()
 	if days == 0 then
-		return false, "rien à exporter (seuls le mois en cours et le précédent sont dans le journal)"
+		return false, L["rien à exporter (seuls le mois en cours et le précédent sont dans le journal)"]
 	end
 	local load = C_AddOns and C_AddOns.LoadAddOn or LoadAddOn
 	local ok, loaded = pcall(load, "Polypode_Histoire_Archive")
 	if not ok or not loaded then
-		return false, "activez « Polypode Histoire Archive » dans la liste des AddOns, puis recommencez"
+		return false, L["activez « Polypode Histoire Archive » dans la liste des AddOns, puis recommencez"]
 	end
 	PolypodeHistoireArchive = PolypodeHistoireArchive or {}
 	local archive = PolypodeHistoireArchive
@@ -1022,8 +1023,8 @@ events:SetScript("OnEvent", function(_, event, ...)
 			end)
 			if size >= ns.WARN_SIZE then
 				C_Timer.After(10, function()
-					UIErrorsFrame:AddMessage(string.format("Polypode Histoire : journal de %.1f Mo, pensez à "
-						.. "l'exporter (/poly histoire).", size / 1048576), 1, 0.5, 0)
+					UIErrorsFrame:AddMessage(string.format(L["Polypode Histoire : journal de %.1f Mo, pensez à "
+						.. "l'exporter (/poly histoire)."], size / 1048576), 1, 0.5, 0)
 				end)
 			end
 		end

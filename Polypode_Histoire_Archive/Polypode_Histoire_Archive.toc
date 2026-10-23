@@ -1,8 +1,9 @@
 ## Interface: 120000, 16001
 ## Title: Polypode Histoire Archive
-## Notes: Archive du journal de Polypode Histoire (mois exportés). Chargée seulement au moment d'un export : laisser activée.
+## Notes: Archive of the Polypode Histoire journal (exported months). Loaded only when exporting: keep it enabled.
+## Notes-frFR: Archive du journal de Polypode Histoire (mois exportés). Chargée seulement au moment d'un export : laisser activée.
 ## Author: Baktov
-## Version: 1.0.0
+## Version: 1.0.1
 ## Dependencies: Polypode_Histoire
 ## LoadOnDemand: 1
 ## SavedVariables: PolypodeHistoireArchive

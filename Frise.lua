@@ -2,6 +2,7 @@
 
 local _, ns = ...
 local P = Polypode
+local L = ns.L
 
 -- VUE « Frise » de la fenêtre Histoire (boutons Liste / Frise en haut à gauche) : axe horizontal
 -- sur une période (Jour : cadré sur la plage jouée ; Semaine : du lundi au dimanche ; Mois ; Tous :
@@ -17,10 +18,10 @@ local P = Polypode
 local H = ns.H -- outils de Histoire.lua (chargé avant ce fichier)
 
 local SCALES = {
-	{ key = "jour", label = "Jour" },
-	{ key = "semaine", label = "Semaine" },
-	{ key = "mois", label = "Mois" },
-	{ key = "tous", label = "Tous" },
+	{ key = "jour", label = L["Jour"] },
+	{ key = "semaine", label = L["Semaine"] },
+	{ key = "mois", label = L["Mois"] },
+	{ key = "tous", label = L["Tous"] },
 }
 local WEIGHT = {
 	boss = 3, mplus = 3, lvl = 3, mount = 3,
@@ -30,11 +31,11 @@ local WEIGHT = {
 }
 local MIN_WEIGHT = { jour = 0, semaine = 1, mois = 2, tous = 3 }
 local KIND_LABELS = {
-	boss = "boss de raid vaincu", mplus = "clé mythique+ terminée", lvl = "niveau atteint", mount = "monture obtenue",
-	ach = "haut fait", dng = "donjon terminé", renown = "palier de renom", guild = "guilde rejointe ou quittée",
-	delve = "gouffre (ou section) terminé", toy = "jouet", pet = "mascotte", rep = "rang de réputation",
-	ilvl = "niveau d'objet", friend = "ami ajouté ou retiré", club = "communauté rejointe ou quittée",
-	grp = "équipe groupée", enter = "entrée dans une instance",
+	boss = L["boss de raid vaincu"], mplus = L["clé mythique+ terminée"], lvl = L["niveau atteint"],
+	mount = L["monture obtenue"], ach = L["haut fait"], dng = L["donjon terminé"], renown = L["palier de renom"],
+	guild = L["guilde rejointe ou quittée"], delve = L["gouffre (ou section) terminé"], toy = L["jouet"],
+	pet = L["mascotte"], rep = L["rang de réputation"], ilvl = L["niveau d'objet"], friend = L["ami ajouté ou retiré"],
+	club = L["communauté rejointe ou quittée"], grp = L["équipe groupée"], enter = L["entrée dans une instance"],
 }
 -- Icônes du jeu par type (mêmes que le site ; absentes de WoW Forever : point d'interrogation).
 local ICONS = {
@@ -59,8 +60,10 @@ local TOP_BAR = 30 -- barre du haut (chevrons, échelles)
 local JOUR_MARGIN = 1800 -- vue Jour : marge autour de la plage jouée (s)
 local JOUR_MIN_SPAN = 3 * 3600
 local PATCH_RGB = { 0.25, 1, 0.25 }
-local MONTHS_SHORT = { "janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc." }
-local WEEKDAYS_SHORT = { "dim.", "lun.", "mar.", "mer.", "jeu.", "ven.", "sam." }
+-- Mois et jours abrégés : une seule clé chacun, découpée aux espaces (en français, « mars » abrégé
+-- et « mars » entier sont la même clé, que l'anglais distingue : Mar / March).
+local MONTHS_SHORT = { strsplit(" ", L["janv. févr. mars avr. mai juin juil. août sept. oct. nov. déc."]) }
+local WEEKDAYS_SHORT = { strsplit(" ", L["dim. lun. mar. mer. jeu. ven. sam."]) }
 
 local panel, area, track, periodText, emptyText
 local scaleButtons = {}
@@ -142,18 +145,20 @@ end
 
 local function PeriodLabel(scale, period)
 	local y, m, d = DayParts(period.startKey)
-	local months = H.MONTHS
+	local months, inText = H.MONTHS, H.MONTHS_IN_TEXT
 	if scale == "jour" then
-		return H.WEEKDAYS[Weekday(period.startKey) + 1] .. " " .. d .. " " .. months[m]:lower() .. " " .. y
+		return L["%s %d %s %d"]:format(H.WEEKDAYS[Weekday(period.startKey) + 1], d, inText[m], y)
 	elseif scale == "mois" then
 		return months[m] .. " " .. y
 	end
 	local ly, lm, ld = DayParts(AddDays(period.endKey, -1))
 	if scale == "semaine" then
-		return "Semaine du " .. d .. (m ~= lm and (" " .. months[m]:lower()) or "") .. " au " .. ld .. " "
-			.. months[lm]:lower() .. " " .. ly
+		if m == lm then
+			return L["Semaine du %d au %d %s %d"]:format(d, ld, inText[lm], ly)
+		end
+		return L["Semaine du %d %s au %d %s %d"]:format(d, inText[m], ld, inText[lm], ly)
 	end
-	return "Du " .. d .. " " .. months[m]:lower() .. " " .. y .. " au " .. ld .. " " .. months[lm]:lower() .. " " .. ly
+	return L["Du %d %s %d au %d %s %d"]:format(d, inText[m], y, ld, inText[lm], ly)
 end
 
 -- DONNÉES -----------------------------------------------------------------------------------------
@@ -196,27 +201,27 @@ local function ShortText(line)
 	local f, n = line.fields, #line.keys > 1 and (" ×" .. #line.keys) or ""
 	local kind = line.kind
 	if kind == "lvl" then
-		return "Niv. " .. (f[4] or "?")
+		return L["Niv. %s"]:format(f[4] or "?")
 	elseif kind == "ilvl" then
-		return "iLvl " .. (f[4] or "?")
+		return L["iLvl %s"]:format(f[4] or "?")
 	elseif kind == "ach" then
-		return "Haut fait" .. n
+		return L["Haut fait"] .. n
 	elseif kind == "boss" or kind == "dng" or kind == "enter" then
 		return f[4] or "?"
 	elseif kind == "mplus" then
 		return "+" .. (f[5] or "?") .. " " .. (f[4] or "")
 	elseif kind == "delve" then
-		return "Gouffre" .. ((f[5] and f[5] ~= "" and f[5] ~= "0") and (" " .. f[5]) or "")
+		return L["Gouffre"] .. ((f[5] and f[5] ~= "" and f[5] ~= "0") and (" " .. f[5]) or "")
 	elseif kind == "renown" then
-		return "Renom " .. (f[5] or "?")
+		return L["Renom %s"]:format(f[5] or "?")
 	elseif kind == "rep" then
-		return f[5] or "Réputation"
+		return f[5] or L["Réputation"]
 	elseif kind == "toy" or kind == "mount" or kind == "pet" then
 		return (f[5] and f[5] ~= "") and f[5] or "?"
 	elseif kind == "friend" or kind == "guild" or kind == "club" then
 		return (f[5] == "+" and "+ " or "- ") .. (f[4] or "?")
 	elseif kind == "grp" then
-		return "Équipe " .. (f[4] or "?")
+		return L["Équipe %s"]:format(f[4] or "?")
 	end
 	return kind
 end
@@ -335,7 +340,7 @@ local function BuildModel(width)
 		local t = math.ceil(start / 3600) * 3600
 		while t <= stop do
 			local hour = tonumber(date("%H", t))
-			ticks[#ticks + 1] = { x = x(t), label = hour % every == 0 and (hour .. " h") or nil, minor = hour % every ~= 0 }
+			ticks[#ticks + 1] = { x = x(t), label = hour % every == 0 and L["%d h"]:format(hour) or nil, minor = hour % every ~= 0 }
 			t = t + 3600
 		end
 	elseif state.scale == "semaine" or state.scale == "mois" then
@@ -448,7 +453,7 @@ local function MarkerTooltip(self)
 	end
 	GameTooltip:SetOwner(self, "ANCHOR_BOTTOM")
 	local n = #cluster.items
-	GameTooltip:AddLine(n > 1 and (n .. " événements") or KIND_LABELS[cluster.main.kind] or cluster.main.kind)
+	GameTooltip:AddLine(n > 1 and L["%d événements"]:format(n) or KIND_LABELS[cluster.main.kind] or cluster.main.kind)
 	for i = 1, math.min(n, TOOLTIP_MAX) do
 		local line = cluster.items[i]
 		local times = {}
@@ -462,9 +467,9 @@ local function MarkerTooltip(self)
 		GameTooltip:AddLine(H.EventText(line), 1, 1, 1, true)
 	end
 	if n > TOOLTIP_MAX then
-		GameTooltip:AddLine("... et " .. (n - TOOLTIP_MAX) .. " autre(s)", 0.6, 0.6, 0.6)
+		GameTooltip:AddLine(L["... et %d autre(s)"]:format(n - TOOLTIP_MAX), 0.6, 0.6, 0.6)
 	end
-	GameTooltip:AddLine("Clic : voir ce jour dans la liste", 0.7, 0.7, 0.7)
+	GameTooltip:AddLine(L["Clic : voir ce jour dans la liste"], 0.7, 0.7, 0.7)
 	H.ShowTooltip()
 end
 
@@ -476,10 +481,10 @@ local function BarTooltip(self)
 	GameTooltip:SetOwner(self, "ANCHOR_BOTTOM")
 	GameTooltip:AddLine(H.CharName(s.key))
 	-- Pas de flèche « → » : absente de la police du jeu (carré vide).
-	GameTooltip:AddLine(date("%d/%m", s.start) .. ", de " .. TimeLabel(s.start) .. " à " .. TimeLabel(s.stop)
-		.. (s.open and " (fin non notée)" or "") .. " · " .. H.DurationText(s.stop - s.start), 1, 1, 1)
+	GameTooltip:AddLine(L["%s, de %s à %s"]:format(date(L["%d/%m"], s.start), TimeLabel(s.start), TimeLabel(s.stop))
+		.. (s.open and " " .. L["(fin non notée)"] or "") .. " · " .. H.DurationText(s.stop - s.start), 1, 1, 1)
 	if #currentZones > 0 then
-		GameTooltip:AddLine(state.scale == "mois" and "Clic : afficher cette semaine" or "Clic : afficher ce jour",
+		GameTooltip:AddLine(state.scale == "mois" and L["Clic : afficher cette semaine"] or L["Clic : afficher ce jour"],
 			0.7, 0.7, 0.7)
 	end
 	H.ShowTooltip()
@@ -513,7 +518,7 @@ local function ZoneTooltip(self)
 	end
 	GameTooltip:SetOwner(self, "ANCHOR_CURSOR")
 	GameTooltip:AddLine(PeriodLabel(zone.scale, Period(zone.scale, zone.day)))
-	GameTooltip:AddLine(zone.scale == "jour" and "Clic : afficher ce jour" or "Clic : afficher cette semaine",
+	GameTooltip:AddLine(zone.scale == "jour" and L["Clic : afficher ce jour"] or L["Clic : afficher cette semaine"],
 		0.7, 0.7, 0.7)
 	H.ShowTooltip()
 end
@@ -538,20 +543,21 @@ local function ImportanceText()
 	table.sort(weights, function(a, b)
 		return a > b
 	end)
-	local lines = { "|cff40ff40Un filtre coché prend la main :|r une catégorie cochée en bas de la fenêtre montre "
-		.. "tous ses événements, quelle que soit l'échelle.", "", "|cffffd200Poids des événements|r" }
+	local lines = { "|cff40ff40" .. L["Un filtre coché prend la main :"] .. "|r "
+		.. L["une catégorie cochée en bas de la fenêtre montre tous ses événements, quelle que soit l'échelle."], "",
+		"|cffffd200" .. L["Poids des événements"] .. "|r" }
 	for _, w in ipairs(weights) do
 		table.sort(byWeight[w])
-		lines[#lines + 1] = "|cffffd200" .. w .. "|r : " .. table.concat(byWeight[w], ", ")
+		lines[#lines + 1] = L["%s : %s"]:format("|cffffd200" .. w .. "|r", table.concat(byWeight[w], ", "))
 	end
 	lines[#lines + 1] = ""
-	lines[#lines + 1] = "|cffffd200Seuil par échelle|r"
+	lines[#lines + 1] = "|cffffd200" .. L["Seuil par échelle"] .. "|r"
 	for _, scale in ipairs(SCALES) do
-		lines[#lines + 1] = scale.label .. " : poids " .. MIN_WEIGHT[scale.key] .. " et plus"
+		lines[#lines + 1] = L["%s : poids %d et plus"]:format(scale.label, MIN_WEIGHT[scale.key])
 	end
 	lines[#lines + 1] = ""
-	lines[#lines + 1] = "Connexions : montrées par les barres de session. Événements trop proches : regroupés "
-		.. "(compteur), icône et texte du plus marquant."
+	lines[#lines + 1] = L["Connexions : montrées par les barres de session. Événements trop proches : regroupés "
+		.. "(compteur), icône et texte du plus marquant."]
 	return table.concat(lines, "\n")
 end
 
@@ -699,7 +705,7 @@ local function Render()
 	local evLabel = Acquire(texts)
 	evLabel:ClearAllPoints()
 	evLabel:SetPoint("LEFT", area, "TOPLEFT", 0, -(strip + rowH))
-	evLabel:SetText("|cff999999Événements|r")
+	evLabel:SetText("|cff999999" .. L["Événements"] .. "|r")
 
 	-- Graduations (traits sur toute la hauteur) et libellés de l'axe.
 	for _, tick in ipairs(model.ticks) do
@@ -811,7 +817,7 @@ function ns.BuildFrise(parent)
 	local prev = H.MakeButton(panel, "<", 24, function()
 		state.anchor = ShiftAnchor(state.scale, state.anchor, -1)
 		Render()
-	end, "Période précédente (jour, semaine ou mois selon l'échelle).")
+	end, L["Période précédente (jour, semaine ou mois selon l'échelle)."])
 	prev:SetPoint("TOPLEFT", 8, -7)
 	panel.prevButton = prev
 
@@ -819,7 +825,7 @@ function ns.BuildFrise(parent)
 	help:SetPoint("TOPRIGHT", -8, -7)
 	help:SetScript("OnEnter", function(self)
 		GameTooltip:SetOwner(self, "ANCHOR_BOTTOMLEFT")
-		GameTooltip:AddLine("Importance des événements")
+		GameTooltip:AddLine(L["Importance des événements"])
 		GameTooltip:AddLine(ImportanceText(), 1, 1, 1, true)
 		H.ShowTooltip()
 	end)
@@ -829,8 +835,8 @@ function ns.BuildFrise(parent)
 		local button = H.MakeButton(panel, scale.label, scale.key == "semaine" and 62 or 46, function()
 			state.scale = scale.key
 			Render()
-		end, "Échelle de la frise : " .. scale.label:lower() .. ". Plus la période est longue, moins on montre de "
-			.. "détails (bouton « ? »).")
+		end, L["Échelle de la frise : %s. Plus la période est longue, moins on montre de détails (bouton « ? »)."]
+			:format(scale.label))
 		button.scale = scale.key
 		button:SetPoint("RIGHT", previous, "LEFT", i == #SCALES and -8 or -2, 0)
 		scaleButtons[#scaleButtons + 1] = button
@@ -839,7 +845,7 @@ function ns.BuildFrise(parent)
 	local nextBtn = H.MakeButton(panel, ">", 24, function()
 		state.anchor = ShiftAnchor(state.scale, state.anchor, 1)
 		Render()
-	end, "Période suivante.")
+	end, L["Période suivante."])
 	nextBtn:SetPoint("RIGHT", previous, "LEFT", -8, 0)
 	panel.nextButton = nextBtn
 
@@ -856,7 +862,7 @@ function ns.BuildFrise(parent)
 
 	emptyText = area:CreateFontString(nil, "OVERLAY", "GameFontDisable")
 	emptyText:SetPoint("CENTER")
-	emptyText:SetText("Rien sur cette période pour les filtres cochés.")
+	emptyText:SetText(L["Rien sur cette période pour les filtres cochés."])
 	emptyText:Hide()
 
 	panel:SetScript("OnSizeChanged", ScheduleRender)

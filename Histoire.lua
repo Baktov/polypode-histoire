@@ -2,6 +2,7 @@
 
 local _, ns = ...
 local P = Polypode
+local L = ns.L
 
 -- FENÊTRE « Histoire » (bouton de la barre de titre de Polypode, /poly histoire) : le journal de
 -- Journal.lua en arbre Année > Mois > Jour, du plus récent au plus ancien, chaque niveau replié ou
@@ -20,20 +21,19 @@ local MERGE_WINDOW = 300 -- secondes
 -- Champ de la durée (secondes) des événements de fin d'instance ; il ne compte pas pour réunir
 -- les personnages d'une même ligne.
 local DURATION_FIELD = { delve = 7, dng = 6, mplus = 8, boss = 7 }
-local INSTANCE_KINDS = { delve = "le gouffre", party = "le donjon", raid = "le raid" }
 local MIN_WIDTH, MIN_HEIGHT = 560, 220
 -- Filtres (bas de la fenêtre) : clé, libellé de l'infobulle, abrégé à droite de la case, description.
 local FILTERS = {
-	{ key = "conn", label = "Connexions", short = "Con.", tip = "Connexions et déconnexions (avec le temps joué)." },
-	{ key = "ach", label = "Hauts faits", short = "H-F", tip = "Hauts faits obtenus." },
-	{ key = "delve", label = "Gouffres", short = "Gou.", tip = "Entrées dans un gouffre et gouffres (ou sections) terminés." },
-	{ key = "dungeon", label = "Donjons", short = "Don.", tip = "Entrées dans un donjon, donjons terminés et clés mythiques+." },
-	{ key = "raid", label = "Raids", short = "Rai.", tip = "Entrées dans un raid et boss de raid vaincus." },
-	{ key = "coll", label = "Collections", short = "Col.", tip = "Jouets, montures et mascottes obtenus." },
-	{ key = "rep", label = "Renom et réputation", short = "Rép.", tip = "Paliers de renom et rangs de réputation "
-		.. "atteints (amitié comprise)." },
-	{ key = "social", label = "Social", short = "Soc.", tip = "Amis (du personnage ou Battle.net) ajoutés ou "
-		.. "retirés, guildes et communautés rejointes ou quittées." },
+	{ key = "conn", label = L["Connexions"], short = L["Con."], tip = L["Connexions et déconnexions (avec le temps joué)."] },
+	{ key = "ach", label = L["Hauts faits"], short = L["H-F"], tip = L["Hauts faits obtenus."] },
+	{ key = "delve", label = L["Gouffres"], short = L["Gou."], tip = L["Entrées dans un gouffre et gouffres (ou sections) terminés."] },
+	{ key = "dungeon", label = L["Donjons"], short = L["Don."], tip = L["Entrées dans un donjon, donjons terminés et clés mythiques+."] },
+	{ key = "raid", label = L["Raids"], short = L["Rai."], tip = L["Entrées dans un raid et boss de raid vaincus."] },
+	{ key = "coll", label = L["Collections"], short = L["Col."], tip = L["Jouets, montures et mascottes obtenus."] },
+	{ key = "rep", label = L["Renom et réputation"], short = L["Rép."], tip = L["Paliers de renom et rangs de réputation "
+		.. "atteints (amitié comprise)."] },
+	{ key = "social", label = L["Social"], short = L["Soc."], tip = L["Amis (du personnage ou Battle.net) ajoutés ou "
+		.. "retirés, guildes et communautés rejointes ou quittées."] },
 }
 local CATEGORY_OF_KIND = { ["in"] = "conn", out = "conn", ach = "ach", delve = "delve", dng = "dungeon",
 	mplus = "dungeon", boss = "raid", toy = "coll", mount = "coll", pet = "coll", renown = "rep", rep = "rep",
@@ -45,21 +45,25 @@ local CATEGORY_OF_ENTRY = { delve = "delve", party = "dungeon", raid = "raid" }
 -- (Mamytwink / Wowhead, nom officiel français s'il y en a un) ; 12.1.7 « Échos du Noyau-monde » :
 -- pas encore daté au 16/10/2026.
 local PATCHES = {
-	["2026-01-21"] = "Patch 12.0.0 (pré-patch de Midnight)",
-	["2026-02-11"] = "Patch 12.0.1",
-	["2026-03-03"] = "Sortie de Midnight",
-	["2026-04-22"] = "Patch 12.0.5",
-	["2026-06-17"] = "Patch 12.0.7 « Révélations »",
-	["2026-08-12"] = "Patch 12.1.0 « La malédiction d'Ula'tek »",
-	["2026-08-19"] = "Saison 2 de Midnight",
-	["2026-10-14"] = "Patch 12.1.5 « La Promesse de demain »",
+	["2026-01-21"] = L["Patch 12.0.0 (pré-patch de Midnight)"],
+	["2026-02-11"] = L["Patch 12.0.1"],
+	["2026-03-03"] = L["Sortie de Midnight"],
+	["2026-04-22"] = L["Patch 12.0.5"],
+	["2026-06-17"] = L["Patch 12.0.7 « Révélations »"],
+	["2026-08-12"] = L["Patch 12.1.0 « La malédiction d'Ula'tek »"],
+	["2026-08-19"] = L["Saison 2 de Midnight"],
+	["2026-10-14"] = L["Patch 12.1.5 « La Promesse de demain »"],
 }
 local PATCH_COLOR = "|cff40ff40"
 -- Table propre à Retail (WoW Forever a ses propres versions).
 local IS_RETAIL = (select(4, GetBuildInfo()) or 0) >= 100000
-local MONTHS = { "Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre",
-	"Octobre", "Novembre", "Décembre" }
-local WEEKDAYS = { "Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi" }
+-- Mois en tête de ligne, mois dans une phrase (« lundi 21 octobre » : minuscule en français, pas en
+-- anglais ni en allemand), jours de la semaine.
+local MONTHS = { L["Janvier"], L["Février"], L["Mars"], L["Avril"], L["Mai"], L["Juin"], L["Juillet"], L["Août"],
+	L["Septembre"], L["Octobre"], L["Novembre"], L["Décembre"] }
+local MONTHS_IN_TEXT = { L["janvier"], L["février"], L["mars"], L["avril"], L["mai"], L["juin"], L["juillet"], L["août"],
+	L["septembre"], L["octobre"], L["novembre"], L["décembre"] }
+local WEEKDAYS = { L["Dimanche"], L["Lundi"], L["Mardi"], L["Mercredi"], L["Jeudi"], L["Vendredi"], L["Samedi"] }
 
 local frame, listPanel
 
@@ -186,11 +190,11 @@ end
 local function DurationText(seconds)
 	local minutes = math.floor(seconds / 60)
 	if minutes < 1 then
-		return "< 1 min"
+		return L["< 1 min"]
 	elseif minutes < 60 then
-		return minutes .. " min"
+		return L["%d min"]:format(minutes)
 	end
-	return string.format("%d h %02d", math.floor(minutes / 60), minutes % 60)
+	return L["%d h %02d"]:format(math.floor(minutes / 60), minutes % 60)
 end
 
 -- Durées des sessions : [événement « out »] = secondes depuis le « in » précédent du même personnage
@@ -218,11 +222,13 @@ local function SessionDurations(days)
 	return durations
 end
 
+-- Nom entre guillemets (ceux de la langue d'affichage), en jaune.
 local function Quoted(text)
-	return "« |cffffd200" .. tostring(text) .. "|r »"
+	return L["« %s »"]:format("|cffffd200" .. tostring(text) .. "|r")
 end
 
--- Texte d'une ligne : noms des personnages puis l'action (verbe au pluriel s'ils sont plusieurs).
+-- Texte d'une ligne : noms des personnages puis l'action. Deux formats par événement, singulier et
+-- pluriel (verbe accordé quand ils sont plusieurs), le premier %s recevant les noms.
 local function EventText(line)
 	local f = line.fields
 	local names = {}
@@ -231,8 +237,8 @@ local function EventText(line)
 	end
 	local who = table.concat(names, ", ")
 	local plural = #line.keys > 1
-	local function verb(one, many)
-		return plural and many or one
+	local function say(one, many, ...)
+		return (plural and many or one):format(who, ...)
 	end
 	local kind = line.kind
 	-- Parenthèse finale : précisions non vides, puis la durée (du premier personnage de la ligne).
@@ -250,68 +256,90 @@ local function EventText(line)
 		return #parts > 0 and (" (" .. table.concat(parts, ", ") .. ")") or ""
 	end
 	if kind == "in" then
-		return who .. " " .. verb("se connecte", "se connectent")
+		return say(L["%s se connecte"], L["%s se connectent"])
 	elseif kind == "out" then
 		local played = #line.keys == 1 and line.durations[1] and (" (" .. DurationText(line.durations[1]) .. ")") or ""
-		return who .. " |cff999999" .. verb("se déconnecte", "se déconnectent") .. played .. "|r"
+		return say(L["%s |cff999999se déconnecte%s|r"], L["%s |cff999999se déconnectent%s|r"], played)
 	elseif kind == "grp" then
-		return "|cff40ff40L'équipe " .. Quoted(f[4]) .. " se groupe|r (" .. (f[5] or "?") .. " personnages)"
+		return L["|cff40ff40L'équipe %s se groupe|r (%s personnages)"]:format(Quoted(f[4]), f[5] or "?")
 	elseif kind == "lvl" then
-		return who .. " " .. verb("atteint", "atteignent") .. " le |cffffd200niveau " .. (f[4] or "?") .. "|r"
+		return say(L["%s atteint le |cffffd200niveau %s|r"], L["%s atteignent le |cffffd200niveau %s|r"], f[4] or "?")
 	elseif kind == "ach" then
-		return who .. " " .. verb("obtient", "obtiennent") .. " le haut fait " .. Quoted(AchievementName(f[4]))
+		return say(L["%s obtient le haut fait %s"], L["%s obtiennent le haut fait %s"], Quoted(AchievementName(f[4])))
 	elseif kind == "ilvl" then
 		local gain = (tonumber(f[4]) or 0) - (tonumber(f[5]) or 0)
-		return who .. " " .. verb("passe", "passent") .. " au |cffffd200niveau d'objet " .. (f[4] or "?")
-			.. "|r |cff40ff40(+" .. gain .. ")|r"
+		return say(L["%s passe au |cffffd200niveau d'objet %s|r"], L["%s passent au |cffffd200niveau d'objet %s|r"],
+			f[4] or "?") .. " |cff40ff40(+" .. gain .. ")|r"
 	elseif kind == "toy" or kind == "mount" or kind == "pet" then
-		local noun = kind == "toy" and "le jouet" or (kind == "mount" and "la monture" or "la mascotte")
-		local name = f[5] and f[5] ~= "" and f[5] or CollectionName(kind, f[4]) or ("n° " .. tostring(f[4]))
-		return who .. " " .. verb("obtient", "obtiennent") .. " " .. noun .. " " .. Quoted(name)
+		local name = Quoted(f[5] and f[5] ~= "" and f[5] or CollectionName(kind, f[4]) or L["n° %s"]:format(tostring(f[4])))
+		if kind == "toy" then
+			return say(L["%s obtient le jouet %s"], L["%s obtiennent le jouet %s"], name)
+		elseif kind == "mount" then
+			return say(L["%s obtient la monture %s"], L["%s obtiennent la monture %s"], name)
+		end
+		return say(L["%s obtient la mascotte %s"], L["%s obtiennent la mascotte %s"], name)
 	elseif kind == "friend" then
 		local added = f[5] == "+"
 		if f[6] == "b" then
 			-- Ami Battle.net : commun au compte, sans nom de personnage (détail dans l'infobulle).
-			return "|cff82c5ffAmi Battle.net " .. (added and "ajouté" or "retiré") .. "|r : " .. Quoted(f[4])
+			return (added and L["|cff82c5ffAmi Battle.net ajouté|r : %s"] or L["|cff82c5ffAmi Battle.net retiré|r : %s"])
+				:format(Quoted(f[4]))
 		end
-		return who .. " " .. (added and verb("ajoute", "ajoutent") .. " " .. Quoted(f[4]) .. " à ses amis"
-			or verb("retire", "retirent") .. " " .. Quoted(f[4]) .. " de ses amis")
+		if added then
+			return say(L["%s ajoute %s à ses amis"], L["%s ajoutent %s à leurs amis"], Quoted(f[4]))
+		end
+		return say(L["%s retire %s de ses amis"], L["%s retirent %s de leurs amis"], Quoted(f[4]))
 	elseif kind == "guild" then
-		return who .. " " .. (f[5] == "+" and verb("rejoint", "rejoignent") or verb("quitte", "quittent"))
-			.. " la guilde " .. Quoted(f[4])
+		if f[5] == "+" then
+			return say(L["%s rejoint la guilde %s"], L["%s rejoignent la guilde %s"], Quoted(f[4]))
+		end
+		return say(L["%s quitte la guilde %s"], L["%s quittent la guilde %s"], Quoted(f[4]))
 	elseif kind == "club" then
 		local added = f[5] == "+"
 		if f[6] == "b" then
-			return "|cff82c5ffCommunauté Battle.net " .. (added and "rejointe" or "quittée") .. "|r : " .. Quoted(f[4])
+			return (added and L["|cff82c5ffCommunauté Battle.net rejointe|r : %s"]
+				or L["|cff82c5ffCommunauté Battle.net quittée|r : %s"]):format(Quoted(f[4]))
 		end
-		return who .. " " .. (added and verb("rejoint", "rejoignent") or verb("quitte", "quittent"))
-			.. " la communauté " .. Quoted(f[4])
+		if added then
+			return say(L["%s rejoint la communauté %s"], L["%s rejoignent la communauté %s"], Quoted(f[4]))
+		end
+		return say(L["%s quitte la communauté %s"], L["%s quittent la communauté %s"], Quoted(f[4]))
 	elseif kind == "renown" then
-		return who .. " " .. verb("atteint", "atteignent") .. " le |cffffd200renom " .. (f[5] or "?") .. "|r auprès de "
-			.. Quoted(f[6] ~= "" and f[6] or "?")
+		return say(L["%s atteint le |cffffd200renom %s|r auprès de %s"], L["%s atteignent le |cffffd200renom %s|r auprès de %s"],
+			f[5] or "?", Quoted(f[6] ~= "" and f[6] or "?"))
 	elseif kind == "rep" then
-		return who .. " " .. verb("devient", "deviennent") .. " " .. Quoted(f[5] or "?") .. " auprès de "
-			.. Quoted(f[6] ~= "" and f[6] or "?")
+		return say(L["%s devient %s auprès de %s"], L["%s deviennent %s auprès de %s"], Quoted(f[5] or "?"),
+			Quoted(f[6] ~= "" and f[6] or "?"))
 	elseif kind == "enter" then
 		local difficulty = f[6] ~= "delve" and DifficultyName(f[5])
-		return who .. " |cff999999" .. verb("entre", "entrent") .. " dans " .. (INSTANCE_KINDS[f[6]] or "l'instance")
-			.. "|r " .. Quoted(f[4]) .. (difficulty and (" |cff999999(" .. difficulty .. ")|r") or "")
+		local text
+		if f[6] == "delve" then
+			text = say(L["%s |cff999999entre dans le gouffre|r %s"], L["%s |cff999999entrent dans le gouffre|r %s"], Quoted(f[4]))
+		elseif f[6] == "party" then
+			text = say(L["%s |cff999999entre dans le donjon|r %s"], L["%s |cff999999entrent dans le donjon|r %s"], Quoted(f[4]))
+		elseif f[6] == "raid" then
+			text = say(L["%s |cff999999entre dans le raid|r %s"], L["%s |cff999999entrent dans le raid|r %s"], Quoted(f[4]))
+		else
+			text = say(L["%s |cff999999entre dans l'instance|r %s"], L["%s |cff999999entrent dans l'instance|r %s"],
+				Quoted(f[4]))
+		end
+		return text .. (difficulty and (" |cff999999(" .. difficulty .. ")|r") or "")
 	elseif kind == "delve" then
 		-- Palier « 0 » : inconnu (anciens événements, lus dans les données du groupe à l'entrée).
-		local tier = f[5] and f[5] ~= "" and f[5] ~= "0" and ("palier " .. f[5]) or nil
-		local section = f[6] and f[6] ~= "" and (" : " .. Quoted(f[6])) or ""
-		return who .. " " .. verb("termine", "terminent") .. " le gouffre " .. Quoted(f[4]) .. section .. details(tier)
+		local tier = f[5] and f[5] ~= "" and f[5] ~= "0" and L["palier %s"]:format(f[5]) or nil
+		local name = f[6] and f[6] ~= "" and L["%s : %s"]:format(Quoted(f[4]), Quoted(f[6])) or Quoted(f[4])
+		return say(L["%s termine le gouffre %s"], L["%s terminent le gouffre %s"], name) .. details(tier)
 	elseif kind == "dng" then
-		return who .. " " .. verb("termine", "terminent") .. " le donjon " .. Quoted(f[4]) .. details(DifficultyName(f[5]))
+		return say(L["%s termine le donjon %s"], L["%s terminent le donjon %s"], Quoted(f[4])) .. details(DifficultyName(f[5]))
 	elseif kind == "mplus" then
-		local timed = f[6] == "1" and "|cff40ff40dans les temps|r" or "|cffff4040hors temps|r"
-		return who .. " " .. verb("termine", "terminent") .. " la clé " .. Quoted(f[4]) .. " |cffffd200+"
-			.. (f[5] or "?") .. "|r" .. details(timed)
+		local timed = f[6] == "1" and "|cff40ff40" .. L["dans les temps"] .. "|r" or "|cffff4040" .. L["hors temps"] .. "|r"
+		return say(L["%s termine la clé %s |cffffd200+%s|r"], L["%s terminent la clé %s |cffffd200+%s|r"], Quoted(f[4]),
+			f[5] or "?") .. details(timed)
 	elseif kind == "boss" then
-		return who .. " " .. verb("vainc", "vainquent") .. " " .. Quoted(f[4]) .. " |cff999999"
+		return say(L["%s vainc %s"], L["%s vainquent %s"], Quoted(f[4])) .. " |cff999999"
 			.. details(f[6] or "?", DifficultyName(f[5])) .. "|r"
 	end
-	return who .. " : " .. kind
+	return L["%s : %s"]:format(who, kind)
 end
 
 -- Lignes d'un jour : événements de même type et mêmes champs (durée exceptée) réunis s'ils sont
@@ -399,8 +427,8 @@ local function BuildItems()
 					hour = 12 })
 				local list = lists[day]
 				items[#items + 1] = { header = 3, key = day,
-					label = WEEKDAYS[tonumber(date("%w", t)) + 1] .. " " .. tonumber(day:sub(9, 10)) .. " "
-						.. MONTHS[tonumber(day:sub(6, 7))]:lower(), count = #list, patch = patches[day] }
+					label = L["%s %d %s"]:format(WEEKDAYS[tonumber(date("%w", t)) + 1], tonumber(day:sub(9, 10)),
+						MONTHS_IN_TEXT[tonumber(day:sub(6, 7))]), count = #list, patch = patches[day] }
 				if IsOpen(day) then
 					for _, line in ipairs(DayLines(list, durations)) do
 						items[#items + 1] = line
@@ -427,7 +455,7 @@ local function FormatItem(item)
 			text = text .. "  |cff999999(" .. item.count .. ")|r"
 		end
 		if item.patch then
-			text = text .. "  " .. PATCH_COLOR .. item.patch .. (isFuture and " (à venir)" or "") .. "|r"
+			text = text .. "  " .. PATCH_COLOR .. item.patch .. (isFuture and " " .. L["(à venir)"] or "") .. "|r"
 		end
 		return text
 	end
@@ -438,11 +466,11 @@ local function ItemTooltip(item)
 	if item.header then
 		local lines = { item.label }
 		if item.patch then
-			lines[#lines + 1] = PATCH_COLOR .. item.patch .. "|r (serveurs européens)"
+			lines[#lines + 1] = PATCH_COLOR .. item.patch .. "|r " .. L["(serveurs européens)"]
 		end
-		lines[#lines + 1] = item.count .. " événement(s)"
+		lines[#lines + 1] = L["%d événement(s)"]:format(item.count)
 		if item.count > 0 then
-			lines[#lines + 1] = IsOpen(item.key) and "Clic : replier" or "Clic : déplier"
+			lines[#lines + 1] = IsOpen(item.key) and L["Clic : replier"] or L["Clic : déplier"]
 		end
 		return lines
 	end
@@ -452,9 +480,9 @@ local function ItemTooltip(item)
 		lines[#lines + 1] = { CharName(key), date("%H:%M:%S", item.times[i]) .. played }
 	end
 	if item.kind == "ach" then
-		lines[#lines + 1] = "Clic : ouvrir le haut fait"
+		lines[#lines + 1] = L["Clic : ouvrir le haut fait"]
 	end
-	lines[#lines + 1] = "Clic droit : supprimer"
+	lines[#lines + 1] = L["Clic droit : supprimer"]
 	return lines
 end
 
@@ -462,8 +490,8 @@ end
 
 StaticPopupDialogs["POLYPODE_HISTOIRE_DELETE"] = {
 	text = "%s",
-	button1 = DELETE or "Supprimer",
-	button2 = CANCEL or "Annuler",
+	button1 = DELETE or L["Supprimer"],
+	button2 = CANCEL or L["Annuler"],
 	OnAccept = function(_, data)
 		ns.Delete(data)
 	end,
@@ -474,10 +502,10 @@ StaticPopupDialogs["POLYPODE_HISTOIRE_DELETE"] = {
 
 local function AskDelete(item)
 	local count = #item.events
-	StaticPopup_Show("POLYPODE_HISTOIRE_DELETE", "Supprimer cette entrée du journal ?\n\n"
-		.. date("%d/%m/%Y %H:%M", item.time) .. "  " .. EventText(item) .. "\n\n"
-		.. (count > 1 and (count .. " événements (un par personnage) seront retirés") or "Elle sera retirée")
-		.. ", ici et sur les clients connectés.", nil, item.events)
+	StaticPopup_Show("POLYPODE_HISTOIRE_DELETE", L["Supprimer cette entrée du journal ?"] .. "\n\n"
+		.. date(L["%d/%m/%Y %H:%M"], item.time) .. "  " .. EventText(item) .. "\n\n"
+		.. (count > 1 and L["%d événements (un par personnage) seront retirés, ici et sur les clients connectés."]:format(count)
+			or L["Elle sera retirée, ici et sur les clients connectés."]), nil, item.events)
 end
 
 local function OnItemClick(item, mouseButton)
@@ -495,15 +523,15 @@ end
 
 StaticPopupDialogs["POLYPODE_HISTOIRE_EXPORT"] = {
 	text = "%s",
-	button1 = "Exporter",
-	button2 = CANCEL or "Annuler",
+	button1 = L["Exporter"],
+	button2 = CANCEL or L["Annuler"],
 	OnAccept = function()
 		local ok, result = ns.Export()
 		if ok then
-			UIErrorsFrame:AddMessage("Polypode Histoire : " .. result .. " événement(s) archivé(s), écrits à la "
-				.. "déconnexion ou au /reload.", 0.25, 1, 0.25)
+			UIErrorsFrame:AddMessage(L["Polypode Histoire : %s événement(s) archivé(s), écrits à la déconnexion ou au /reload."]
+				:format(result), 0.25, 1, 0.25)
 		else
-			UIErrorsFrame:AddMessage("Polypode Histoire : " .. result .. ".", 1, 0.1, 0.1)
+			UIErrorsFrame:AddMessage(L["Polypode Histoire : %s."]:format(result), 1, 0.1, 0.1)
 		end
 	end,
 	timeout = 0,
@@ -514,14 +542,14 @@ StaticPopupDialogs["POLYPODE_HISTOIRE_EXPORT"] = {
 local function AskExport()
 	local days, events, cutoff = ns.ExportableDays()
 	if days == 0 then
-		UIErrorsFrame:AddMessage("Polypode Histoire : rien à exporter (seuls le mois en cours et le précédent sont "
-			.. "dans le journal).", 1, 0.82, 0)
+		UIErrorsFrame:AddMessage(L["Polypode Histoire : rien à exporter (seuls le mois en cours et le précédent sont "
+			.. "dans le journal)."], 1, 0.82, 0)
 		return
 	end
-	StaticPopup_Show("POLYPODE_HISTOIRE_EXPORT", string.format("Exporter %d jour(s) (%d événements) antérieurs au "
+	StaticPopup_Show("POLYPODE_HISTOIRE_EXPORT", string.format(L["Exporter %d jour(s) (%d événements) antérieurs au "
 		.. "%s vers l'archive (Polypode Histoire Archive) ?\n\nL'archive est complétée, jamais remplacée ; ces "
-		.. "jours sont ensuite retirés du journal, ici et sur les clients connectés.", days, events,
-		date("%d/%m/%Y", time({ year = tonumber(cutoff:sub(1, 4)), month = tonumber(cutoff:sub(6, 7)), day = 1, hour = 12 }))))
+		.. "jours sont ensuite retirés du journal, ici et sur les clients connectés."], days, events,
+		date(L["%d/%m/%Y"], time({ year = tonumber(cutoff:sub(1, 4)), month = tonumber(cutoff:sub(6, 7)), day = 1, hour = 12 }))))
 end
 
 -- FENÊTRE -----------------------------------------------------------------------------------------
@@ -529,9 +557,9 @@ end
 local function HeaderText()
 	local size, count = ns.GetSize()
 	local color = size >= ns.ALERT_SIZE and "|cffff4040" or (size >= ns.WARN_SIZE and "|cffff8000" or "|cff999999")
-	local text = "Journal commun  " .. color .. "· " .. count .. " événements · " .. math.ceil(size / 1024) .. " Ko"
+	local text = L["Journal commun"] .. "  " .. color .. L["· %d événements · %d Ko"]:format(count, math.ceil(size / 1024))
 	if size >= ns.WARN_SIZE then
-		text = text .. " · export conseillé"
+		text = text .. " · " .. L["export conseillé"]
 	end
 	return text .. "|r"
 end
@@ -595,11 +623,11 @@ local function Build()
 	end)
 	patchCheck:SetScript("OnEnter", function(self)
 		GameTooltip:SetOwner(self, "ANCHOR_TOP")
-		GameTooltip:AddLine("Extensions et patchs")
-		GameTooltip:AddLine("Cochée : les jours de sortie des patchs et des extensions sont écrits en vert avec "
-			.. "leur nom (date des serveurs européens), dans les mois affichés, et ceux annoncés à venir.", 1, 1, 1, true)
+		GameTooltip:AddLine(L["Extensions et patchs"])
+		GameTooltip:AddLine(L["Cochée : les jours de sortie des patchs et des extensions sont écrits en vert avec "
+			.. "leur nom (date des serveurs européens), dans les mois affichés, et ceux annoncés à venir."], 1, 1, 1, true)
 		if not IS_RETAIL then
-			GameTooltip:AddLine("Retail seulement.", 1, 0.25, 0.25, true)
+			GameTooltip:AddLine(L["Retail seulement."], 1, 0.25, 0.25, true)
 		end
 		ShowTooltip()
 	end)
@@ -609,7 +637,7 @@ local function Build()
 	end
 	local patchText = patchCheck.Text or patchCheck.text
 	if patchText then
-		patchText:SetText("Ext")
+		patchText:SetText(L["Ext"])
 		patchText:SetFontObject("GameFontHighlightSmall")
 		patchText:ClearAllPoints()
 		patchText:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -24, 13)
@@ -622,7 +650,7 @@ local function Build()
 
 	local title = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
 	title:SetPoint("TOP", 0, -14)
-	title:SetText("Histoire")
+	title:SetText(L["Histoire"])
 	frame.TitleText = title
 	frame.filterChecks = {}
 	local previous
@@ -643,8 +671,8 @@ local function Build()
 			GameTooltip:SetOwner(self, "ANCHOR_TOP")
 			GameTooltip:AddLine(filter.label)
 			GameTooltip:AddLine(filter.tip, 1, 1, 1, true)
-			GameTooltip:AddLine("Cochée : n'affiche que ces événements (avec les autres cases cochées). Aucune "
-				.. "case cochée : tout le journal.", 0.7, 0.7, 0.7, true)
+			GameTooltip:AddLine(L["Cochée : n'affiche que ces événements (avec les autres cases cochées). Aucune "
+				.. "case cochée : tout le journal."], 0.7, 0.7, 0.7, true)
 			ShowTooltip()
 		end)
 		check:SetScript("OnLeave", GameTooltip_Hide)
@@ -672,14 +700,14 @@ local function Build()
 	P.CreateScrollList(listPanel, FormatItem, nil, { onClick = OnItemClick, tooltip = ItemTooltip })
 
 	-- Boutons à droite de l'en-tête du panneau : « Exporter », puis « Tout replier / déplier ».
-	local exportBtn = MakeButton(listPanel, "Exporter", 70, AskExport, function()
+	local exportBtn = MakeButton(listPanel, L["Exporter"], 70, AskExport, function()
 		local days, events = ns.ExportableDays()
-		return "Archive les mois antérieurs au mois précédent (" .. days .. " jour(s), " .. events .. " événements) "
-			.. "dans Polypode Histoire Archive, puis les retire du journal pour l'alléger. L'archive est complétée à "
-			.. "chaque export, jamais remplacée."
+		return L["Archive les mois antérieurs au mois précédent (%d jour(s), %d événements) dans Polypode Histoire "
+			.. "Archive, puis les retire du journal pour l'alléger. L'archive est complétée à chaque export, jamais "
+			.. "remplacée."]:format(days, events)
 	end)
 	exportBtn:SetPoint("TOPRIGHT", -6, -4)
-	local collapseBtn = MakeButton(listPanel, "Tout replier", 96, function(self)
+	local collapseBtn = MakeButton(listPanel, L["Tout replier"], 96, function(self)
 		local open = Settings().open
 		for _, item in ipairs(frame.items or {}) do
 			if item.header then
@@ -694,8 +722,8 @@ local function Build()
 		end
 		ns.Refresh()
 	end, function(self)
-		return self.collapseAll and "Replie toutes les années, mois et jours affichés."
-			or "Déplie toutes les années, tous les mois et tous les jours."
+		return self.collapseAll and L["Replie toutes les années, mois et jours affichés."]
+			or L["Déplie toutes les années, tous les mois et tous les jours."]
 	end)
 	collapseBtn:SetPoint("RIGHT", exportBtn, "LEFT", -4, 0)
 	frame.collapseButton = collapseBtn
@@ -707,9 +735,9 @@ local function Build()
 	-- la frise (Frise.lua) prend la place de la liste ; filtres et case « Ext » communs aux deux.
 	frame.viewButtons = {}
 	local previousView
-	for _, view in ipairs({ { key = "liste", label = "Liste", tip = "Journal en arbre Année > Mois > Jour." },
-		{ key = "frise", label = "Frise", tip = "Frise chronologique horizontale : jour, semaine, mois ou tout le "
-			.. "journal ; icônes, infobulles, sessions de chaque personnage." } }) do
+	for _, view in ipairs({ { key = "liste", label = L["Liste"], tip = L["Journal en arbre Année > Mois > Jour."] },
+		{ key = "frise", label = L["Frise"], tip = L["Frise chronologique horizontale : jour, semaine, mois ou tout le "
+			.. "journal ; icônes, infobulles, sessions de chaque personnage."] } }) do
 		local button = MakeButton(frame, view.label, 50, function()
 			Settings().view = view.key
 			ns.Refresh()
@@ -785,10 +813,10 @@ function ns.Refresh()
 		anyOpen = anyOpen or (item.header and IsOpen(item.key))
 	end
 	frame.collapseButton.collapseAll = anyOpen
-	frame.collapseButton:SetText(anyOpen and "Tout replier" or "Tout déplier")
+	frame.collapseButton:SetText(anyOpen and L["Tout replier"] or L["Tout déplier"])
 	listPanel.header:SetText(HeaderText())
-	listPanel.emptyText:SetText(next(Settings().filters) and "Aucun événement pour les filtres cochés."
-		or "Aucun événement noté pour l'instant.")
+	listPanel.emptyText:SetText(next(Settings().filters) and L["Aucun événement pour les filtres cochés."]
+		or L["Aucun événement noté pour l'instant."])
 	P.SetListData(listPanel, items)
 end
 P.RefreshHistoire = ns.Refresh
@@ -831,19 +859,20 @@ ns.H = {
 	IS_RETAIL = IS_RETAIL,
 	MONTHS = MONTHS,
 	WEEKDAYS = WEEKDAYS,
+	MONTHS_IN_TEXT = MONTHS_IN_TEXT,
 }
 
 -- INTÉGRATION À POLYPODE --------------------------------------------------------------------------
 
 if P.AddTitleButton then
 	P.AddTitleButton({
-		text = "Histoire",
+		text = L["Histoire"],
 		width = 70,
 		onClick = function()
 			P.ToggleHistoire()
 		end,
-		tooltip = { "Polypode Histoire", "Journal commun de tous les personnages joués : connexions, groupes "
-			.. "d'équipe, gouffres, donjons, clés M+, boss de raid, hauts faits, niveaux, niveau d'objet." },
+		tooltip = { L["Polypode Histoire"], L["Journal commun de tous les personnages joués : connexions, groupes "
+			.. "d'équipe, gouffres, donjons, clés M+, boss de raid, hauts faits, niveaux, niveau d'objet."] },
 		onCreate = function(button)
 			P.ui.histoireButton = button
 		end,
@@ -851,5 +880,5 @@ if P.AddTitleButton then
 end
 
 if P.RegisterSlashCommand then
-	P.RegisterSlashCommand("histoire", P.ToggleHistoire, "journal commun des personnages (Polypode Histoire)")
+	P.RegisterSlashCommand("histoire", P.ToggleHistoire, L["journal commun des personnages (Polypode Histoire)"])
 end
