@@ -1,11 +1,18 @@
 # Polypode Histoire
 
+*English version: [README.en.md](README.en.md)*
+
 **Journal chronologique commun** de tous vos personnages pour
 [Polypode](https://github.com/Baktov/polypode), sous forme d'addon séparé : connexions,
 déconnexions, groupes d'équipe, gouffres, donjons, clés mythiques+, boss de raid, hauts faits,
 niveaux et niveau d'objet, rangés par année, mois et jour.
 
 Nécessite **Polypode**.
+
+> **Langues** : français, anglais, allemand, espagnol, italien et portugais du Brésil, selon la
+> langue choisie dans Polypode (option « Langue / Language »). Les traductions ont été faites avec
+> l'aide de Claude, l'IA d'Anthropic : les retours de joueurs dont c'est la langue maternelle sont
+> les bienvenus ([issue GitHub](https://github.com/Baktov/polypode-histoire/issues)).
 
 ---
 
@@ -173,7 +180,7 @@ personnage = `nom-royaume`, jour = date locale. Types et champs :
 Polypode Histoire s'affiche dans la langue choisie dans Polypode (option « Langue / Language », `/poly langue`),
 par défaut celle du jeu : français, anglais, allemand, espagnol, italien ou portugais du Brésil
 (anglais pour une autre langue). Nécessite Polypode 2.9 pour choisir la langue ; avec un Polypode plus
-ancien, le module reste en français. La commande `C:/Program Files/Git/poly histoire` garde son nom.
+ancien, le module reste en français. La commande `/poly histoire` garde son nom.
 
 *Polypode Histoire follows the language chosen in Polypode ("Langue / Language" option, `/poly language`), by
 default the game's: French, English, German, Spanish, Italian or Brazilian Portuguese (English for any
