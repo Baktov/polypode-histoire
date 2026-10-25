@@ -586,7 +586,9 @@ end
 local function Build()
 	local settings = Settings()
 	frame = CreateFrame("Frame", "PolypodeHistoireFrame", UIParent, "BackdropTemplate")
-	frame:SetSize(math.max(settings.width or DEFAULT_WIDTH, MIN_WIDTH), math.max(settings.height or DEFAULT_HEIGHT, MIN_HEIGHT))
+	-- Taille gardée, ramenée à celle de l'écran (une taille enregistrée trop grande la dépasserait).
+	frame:SetSize(math.min(math.max(settings.width or DEFAULT_WIDTH, MIN_WIDTH), math.max(UIParent:GetWidth(), MIN_WIDTH)),
+		math.min(math.max(settings.height or DEFAULT_HEIGHT, MIN_HEIGHT), math.max(UIParent:GetHeight(), MIN_HEIGHT)))
 	frame:SetPoint("CENTER")
 	frame:SetFrameStrata("DIALOG")
 	frame:SetMovable(true)
@@ -767,8 +769,21 @@ local function Build()
 	grip:SetNormalTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Up")
 	grip:SetHighlightTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Highlight")
 	grip:SetPushedTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Down")
+	-- Pendant le redimensionnement, le coin haut-gauche reste fixe (ancre TOPLEFT au lieu du centre)
+	-- et la taille ne dépasse pas la place jusqu'aux bords de l'écran : sinon, la fenêtre étant
+	-- retenue dans l'écran, le jeu la repoussait et elle s'agrandissait d'un coup hors de l'écran.
+	-- Départ depuis la souris (alwaysStartFromMouse, comme les poignées de Blizzard) : pas de saut.
 	grip:SetScript("OnMouseDown", function()
-		frame:StartSizing("BOTTOMRIGHT")
+		local left, top = frame:GetLeft(), frame:GetTop()
+		if left and top then
+			frame:ClearAllPoints()
+			frame:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", left, top)
+			if frame.SetResizeBounds then
+				frame:SetResizeBounds(MIN_WIDTH, MIN_HEIGHT, math.max(UIParent:GetWidth() - left, MIN_WIDTH),
+					math.max(top, MIN_HEIGHT))
+			end
+		end
+		frame:StartSizing("BOTTOMRIGHT", true)
 	end)
 	grip:SetScript("OnMouseUp", function()
 		frame:StopMovingOrSizing()

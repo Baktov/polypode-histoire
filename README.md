@@ -190,6 +190,7 @@ other language).*
 
 ## Version
 
+`1.14.1` : redimensionnement par la poignée du coin corrigé : la fenêtre ne s'agrandit plus d'un coup hors de l'écran (coin haut-gauche fixe, taille bornée à l'écran).
 `1.14.0` : double-clic sur la barre de titre : retour à la taille par défaut (Polypode 2.12).
 `1.13.0` : Polypode Histoire en anglais, allemand, espagnol, italien et portugais du Brésil, selon la langue choisie dans Polypode (History, Chronik, Historia, Storia, Histórico) ; tout le journal, anciens événements compris, s'écrit dans la langue choisie (phrases construites à l'affichage). *Translated into English, German, Spanish, Italian and Brazilian Portuguese.*
 `1.12.0` : frise : clic sur une semaine (vue Mois) ou un jour (vue Semaine) pour l'afficher.

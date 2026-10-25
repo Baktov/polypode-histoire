@@ -10,7 +10,7 @@
 ## Notes: Shared chronological journal of all the characters played: logins, team groups, delves, dungeons, M+ keys, raid bosses, achievements, collections, renown and reputation, friends, guilds and communities, levels, item level.
 ## Notes-frFR: Journal chronologique commun de tous les personnages joués : connexions, groupes d'équipe, gouffres, donjons, clés M+, boss de raid, hauts faits, collections, renom et réputation, amis, guildes et communautés, niveaux, niveau d'objet.
 ## Author: Baktov
-## Version: 1.14.0
+## Version: 1.14.1
 ## Dependencies: Polypode
 ## SavedVariables: PolypodeHistoireData, PolypodeHistoireDB
 ## SavedVariablesPerCharacter: PolypodeHistoireChar

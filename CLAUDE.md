@@ -28,7 +28,7 @@ chaque événement, le renvoi de la session aux clients qui arrivent, et la purg
 
 ## Dépendances vers Polypode (API publique utilisée)
 
-`P.EnableTitleDoubleClick(fenêtre, remise, hauteur)` (si présente, Polypode 2.12 : double-clic sur la barre de titre, taille par défaut).
+`P.EnableTitleDoubleClick(fenêtre, remise, hauteur)` (si présente, Polypode 2.12 : double-clic sur la barre de titre, taille par défaut). Poignée de redimensionnement (Histoire.lua, `Build`) : au `OnMouseDown`, ancre `TOPLEFT` (coin haut-gauche fixe) et `SetResizeBounds` maximum = place jusqu'aux bords droit et bas de l'écran, puis `StartSizing("BOTTOMRIGHT", true)` ; taille enregistrée ramenée à celle de l'écran à la construction (fenêtre centrée et `SetClampedToScreen` : sans cela, elle s'agrandissait d'un coup hors de l'écran).
 
 Langues (si présentes) : `P.NewLocale`, `P.AddTranslations` (Polypode 2.8), `P.OnLanguageApplied` (2.9).
 
