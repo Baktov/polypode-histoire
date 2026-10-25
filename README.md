@@ -35,7 +35,7 @@ Nécessite **Polypode**.
 ## Utilisation
 
 Le bouton **Histoire** (barre de titre de Polypode) ou `/poly histoire` ouvre la fenêtre du
-journal : un arbre **Année > Mois > Jour**, du plus récent au plus ancien. **Clic** sur une année,
+journal (**double-clic** sur sa barre de titre : retour à la taille par défaut) : un arbre **Année > Mois > Jour**, du plus récent au plus ancien. **Clic** sur une année,
 un mois ou un jour : le replier ou le déplier (par défaut, seuls l'année, le mois et le jour en
 cours sont dépliés ; vos choix sont gardés). Le bouton **Tout replier** / **Tout déplier** agit sur
 tout l'arbre. Le nombre d'événements est indiqué à droite de chaque année, mois et jour.
@@ -190,6 +190,7 @@ other language).*
 
 ## Version
 
+`1.14.0` : double-clic sur la barre de titre : retour à la taille par défaut (Polypode 2.12).
 `1.13.0` : Polypode Histoire en anglais, allemand, espagnol, italien et portugais du Brésil, selon la langue choisie dans Polypode (History, Chronik, Historia, Storia, Histórico) ; tout le journal, anciens événements compris, s'écrit dans la langue choisie (phrases construites à l'affichage). *Translated into English, German, Spanish, Italian and Brazilian Portuguese.*
 `1.12.0` : frise : clic sur une semaine (vue Mois) ou un jour (vue Semaine) pour l'afficher.
 `1.11.0` : événements supprimés (clic droit) ou retirés automatiquement gardés 120 jours dans la sauvegarde (`deleted`), pour qu'un lecteur du fichier (site Histoire) les retire aussi ; un événement supprimé à la main ne peut plus revenir par un autre client.

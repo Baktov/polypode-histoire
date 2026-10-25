@@ -34,7 +34,7 @@ Requires **Polypode**.
 
 ## Usage
 
-The **History** button (Polypode title bar) or `/poly histoire` opens the journal window: a **Year >
+The **History** button (Polypode title bar) or `/poly histoire` opens the journal window (**double-click** its title bar: back to the default size): a **Year >
 Month > Day** tree, from the most recent to the oldest. **Click** on a year, a month or a day:
 collapse or expand it (by default, only the current year, month and day are expanded; your choices
 are kept). The **Collapse all** / **Expand all** button acts on the whole tree. The number of events

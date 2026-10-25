@@ -22,6 +22,7 @@ local MERGE_WINDOW = 300 -- secondes
 -- les personnages d'une même ligne.
 local DURATION_FIELD = { delve = 7, dng = 6, mplus = 8, boss = 7 }
 local MIN_WIDTH, MIN_HEIGHT = 560, 220
+local DEFAULT_WIDTH, DEFAULT_HEIGHT = 620, 420
 -- Filtres (bas de la fenêtre) : clé, libellé de l'infobulle, abrégé à droite de la case, description.
 local FILTERS = {
 	{ key = "conn", label = L["Connexions"], short = L["Con."], tip = L["Connexions et déconnexions (avec le temps joué)."] },
@@ -585,7 +586,7 @@ end
 local function Build()
 	local settings = Settings()
 	frame = CreateFrame("Frame", "PolypodeHistoireFrame", UIParent, "BackdropTemplate")
-	frame:SetSize(math.max(settings.width or 620, MIN_WIDTH), math.max(settings.height or 420, MIN_HEIGHT))
+	frame:SetSize(math.max(settings.width or DEFAULT_WIDTH, MIN_WIDTH), math.max(settings.height or DEFAULT_HEIGHT, MIN_HEIGHT))
 	frame:SetPoint("CENTER")
 	frame:SetFrameStrata("DIALOG")
 	frame:SetMovable(true)
@@ -773,6 +774,13 @@ local function Build()
 		frame:StopMovingOrSizing()
 		Settings().width, Settings().height = frame:GetSize()
 	end)
+	-- Double-clic sur la barre de titre : taille par défaut (Polypode 2.12).
+	if P.EnableTitleDoubleClick then
+		P.EnableTitleDoubleClick(frame, function()
+			Settings().width, Settings().height = DEFAULT_WIDTH, DEFAULT_HEIGHT
+			frame:SetSize(DEFAULT_WIDTH, DEFAULT_HEIGHT)
+		end)
+	end
 
 	P.ui.histoireFrame = frame
 	if P.SkinFrame then
