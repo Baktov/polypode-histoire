@@ -34,24 +34,30 @@ Requires **Polypode**.
 
 ## Usage
 
-The **History** button (Polypode title bar) or `/poly histoire` opens the journal window (**double-click** its title bar: back to the default size): a **Year >
-Month > Day** tree, from the most recent to the oldest. **Click** on a year, a month or a day:
-collapse or expand it (by default, only the current year, month and day are expanded; your choices
-are kept). The **Collapse all** / **Expand all** button acts on the whole tree. The number of events
-is given right of each year, month and day.
+The **History** button (Polypode title bar) or `/poly histoire` opens the journal window
+(**double-click** its title bar: back to the default size), from the most recent to the oldest,
+laid out as a chronicle (same look as the Histoire v2 website):
 
-**Patch release** days (European server date) are shown **in green** right of the day, with the
+- **Years** and **months**: underlined gold titles, with their number of events.
+- **Days**: a large **gold number** on a **vertical thread** linking the days of the month, then the
+  date, the number of events and the **time played** that day ("9 events · 5 h 21 played").
+- **Events**: the time, the **icon** of the type (achievement, delve, boss, mount...) and the text,
+  names in class color; logins and logouts more discreet (a dot on the thread).
+- **Click** on a year, a month or a day: collapse or expand it (by default, only the current year,
+  month and day are expanded; your choices are kept). **Collapse all** / **Expand all** acts on the
+  whole tree. From the timeline, clicking an icon brings its day to the top of the list.
+
+**Patch release** days (European server date) are shown **in green** right of the date, with the
 patch name ("Wednesday, October 14  Patch 12.1.5 ..."), even with no event that day, in the months
-shown; an announced upcoming patch is always shown, marked "(upcoming)" (Retail only). **Exp** box
-at the bottom right of the window: show these patch and expansion days or not (checked by default).
+shown; an announced upcoming patch is always shown, marked "(upcoming)" (Retail only). **Exp** chip
+at the bottom right of the window: show these patch and expansion days or not (gold by default).
 
-**Filters** (boxes at the bottom left of the window, short labels, full name on hover): **Log.**
-logins, **Ach.** achievements, **Del.** delves, **Dun.** dungeons (with M+ keys), **Rai.** raids
-(entries included), **Col.** collections (toys, mounts, pets), **Rep.** renown and reputation and
-**Soc.** social (friends, guilds, communities). No box checked (default): the whole journal;
-otherwise, only the events of the checked categories, days without a kept event being hidden. The
-choice is kept.
-
+**Filters** (chips at the bottom left of the window, category icon and name, description on hover):
+**Logins**, **Achievements**, **Delves**, **Dungeons** (with M+ keys), **Raids** (entries included),
+**Collections** (toys, mounts, pets), **Renown and reputation** and **Social** (friends, guilds,
+communities). A click checks or unchecks (gold chip; the others fade). None checked (default): the
+whole journal; otherwise, only the events of the checked categories, days without a kept event
+being hidden. The choice is kept. Narrow window: icons only, checked chips keeping their name.
 ### Timeline
 
 **List** / **Timeline** buttons at the top left of the window (choice kept). The **timeline** shows

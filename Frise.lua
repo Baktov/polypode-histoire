@@ -37,17 +37,9 @@ local KIND_LABELS = {
 	pet = L["mascotte"], rep = L["rang de réputation"], ilvl = L["niveau d'objet"], friend = L["ami ajouté ou retiré"],
 	club = L["communauté rejointe ou quittée"], grp = L["équipe groupée"], enter = L["entrée dans une instance"],
 }
--- Icônes du jeu par type (mêmes que le site ; absentes de WoW Forever : point d'interrogation).
-local ICONS = {
-	ach = "achievement_general", delve = "ui_delves", dng = "achievement_dungeon_gloryofthehero",
-	mplus = "achievement_challengemode_gold", boss = "achievement_boss_ragnaros", toy = "inv_misc_toy_10",
-	mount = "ability_mount_ridinghorse", pet = "inv_box_petcarrier_01", renown = "achievement_reputation_08",
-	rep = "achievement_reputation_01", friend = "achievement_guildperk_everybodysfriend",
-	guild = "inv_shirt_guildtabard_01", club = "inv_misc_groupneedmore", grp = "inv_misc_groupneedmore",
-	lvl = "achievement_level_80", ilvl = "inv_sword_04", enter = "spell_arcane_portaldalaran",
-}
-local PATCH_ICON = "inv_scroll_03"
-local FALLBACK_ICON = "Interface\\Icons\\INV_Misc_QuestionMark"
+-- Icônes du jeu par type et icône des patchs : celles de Histoire.lua (liste et frise).
+local ICONS = H.ICONS
+local PATCH_ICON = H.PATCH_ICON
 
 local CLUSTER_PX = 30 -- en dessous : événements voisins regroupés
 local LABEL_PX = 100 -- voisins de la même rangée au moins à cette distance : texte court affiché
@@ -538,11 +530,7 @@ local function ReleaseAll()
 	end
 end
 
-local function SetIcon(texture, name)
-	if not (name and texture:SetTexture("Interface\\Icons\\" .. name)) then
-		texture:SetTexture(FALLBACK_ICON)
-	end
-end
+local SetIcon = H.SetIcon
 
 -- INFOBULLES ET ACTIONS ---------------------------------------------------------------------------
 
@@ -926,7 +914,7 @@ local function Render()
 		button:ClearAllPoints()
 		button:SetPoint("TOP", track, "TOPLEFT", cluster.x, -(strip + 2 + cluster.row * rowH))
 		button:SetFrameLevel(track:GetFrameLevel() + 4)
-		SetIcon(button.icon, ICONS[cluster.main.kind])
+		H.SetEventIcon(button.icon, cluster.main)
 		local n = #cluster.items
 		button.badge:SetText(n > 1 and n or "")
 		if cluster.showLabel then

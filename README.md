@@ -35,24 +35,32 @@ Nécessite **Polypode**.
 ## Utilisation
 
 Le bouton **Histoire** (barre de titre de Polypode) ou `/poly histoire` ouvre la fenêtre du
-journal (**double-clic** sur sa barre de titre : retour à la taille par défaut) : un arbre **Année > Mois > Jour**, du plus récent au plus ancien. **Clic** sur une année,
-un mois ou un jour : le replier ou le déplier (par défaut, seuls l'année, le mois et le jour en
-cours sont dépliés ; vos choix sont gardés). Le bouton **Tout replier** / **Tout déplier** agit sur
-tout l'arbre. Le nombre d'événements est indiqué à droite de chaque année, mois et jour.
+journal (**double-clic** sur sa barre de titre : retour à la taille par défaut), du plus récent au
+plus ancien, présenté comme une chronique (même allure que le site Histoire v2) :
+
+- **Années** et **mois** : titres dorés soulignés, avec leur nombre d'événements.
+- **Jours** : grand **numéro doré** posé sur un **fil vertical** qui relie les jours du mois, puis
+  la date, le nombre d'événements et le **temps joué** ce jour-là (« 9 événements · 5 h 21 de jeu »).
+- **Événements** : l'heure, l'**icône** du type (haut fait, gouffre, boss, monture...) et le texte,
+  noms à la couleur de la classe ; connexions et déconnexions plus discrètes (un point sur le fil).
+- **Clic** sur une année, un mois ou un jour : le replier ou le déplier (par défaut, seuls l'année,
+  le mois et le jour en cours sont dépliés ; vos choix sont gardés). **Tout replier** / **Tout
+  déplier** agit sur tout l'arbre. Depuis la frise, un clic sur une icône amène son jour en haut de
+  la liste.
 
 Les jours de **sortie d'un patch** (date des serveurs européens) sont signalés **en vert** à droite
-du jour, avec le nom du patch (« Mercredi 14 octobre  Patch 12.1.5 « La Promesse de demain » »),
+de la date, avec le nom du patch (« Mercredi 14 octobre  Patch 12.1.5 « La Promesse de demain » »),
 même sans événement ce jour-là, dans les mois affichés ; un patch annoncé à venir est toujours
-affiché, marqué « (à venir) » (Retail seulement). Case **Ext** en bas à droite de la fenêtre : afficher ou
-non ces jours de patchs et d'extensions (cochée par défaut).
+affiché, marqué « (à venir) » (Retail seulement). Pastille **Ext** en bas à droite de la fenêtre :
+afficher ou non ces jours de patchs et d'extensions (dorée par défaut).
 
-**Filtres** (cases en bas à gauche de la fenêtre, libellés abrégés, nom complet au survol) :
-**Con.** connexions, **H-F** hauts faits, **Gou.** gouffres, **Don.** donjons (avec les clés M+),
-**Rai.** raids (entrées comprises), **Col.** collections (jouets, montures, mascottes), **Rép.**
-renom et réputation et **Soc.** social (amis, guildes, communautés). Aucune case cochée (par défaut) :
-tout le journal ; sinon, seuls les événements des catégories cochées, les jours sans événement
-retenu étant masqués. Le choix est gardé.
-
+**Filtres** (pastilles en bas à gauche de la fenêtre, icône et nom de la catégorie, description au
+survol) : **Connexions**, **Hauts faits**, **Gouffres**, **Donjons** (avec les clés M+), **Raids**
+(entrées comprises), **Collections** (jouets, montures, mascottes), **Renom et réputation** et
+**Social** (amis, guildes, communautés). Un clic coche ou décoche (pastille dorée ; les autres
+s'estompent). Aucune cochée (par défaut) : tout le journal ; sinon, seuls les événements des
+catégories cochées, les jours sans événement retenu étant masqués. Le choix est gardé. Fenêtre
+étroite : icônes seules, le nom des pastilles cochées restant affiché.
 ### Frise
 
 Boutons **Liste** / **Frise** en haut à gauche de la fenêtre (choix gardé). La **frise** montre le
@@ -194,6 +202,7 @@ other language).*
 
 ## Version
 
+`1.16.0` : liste du journal présentée comme une chronique (site Histoire v2) : fil vertical, grand numéro doré de chaque jour, temps joué du jour, icône de chaque événement, connexions discrètes, titres d'année et de mois soulignés ; repli inchangé ; depuis la frise, le jour cliqué est amené en haut de la liste. Filtres en pastilles (icône et nom de la catégorie, dorées quand cochées) à la place des cases à libellés abrégés.
 `1.15.0` : frise : présence lisible à toutes les échelles : cases de chaleur par jour (Mois) ou par semaine (Tous) à la place des barres trop fines, fond de chaleur et total du jour en Semaine, ligne « Tous » cumulant les personnages, week-ends teintés (même représentation que le site Histoire v2).
 `1.14.1` : redimensionnement par la poignée du coin corrigé : la fenêtre ne s'agrandit plus d'un coup hors de l'écran (coin haut-gauche fixe, taille bornée à l'écran).
 `1.14.0` : double-clic sur la barre de titre : retour à la taille par défaut (Polypode 2.12).

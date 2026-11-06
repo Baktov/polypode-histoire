@@ -23,23 +23,57 @@ local MERGE_WINDOW = 300 -- secondes
 local DURATION_FIELD = { delve = 7, dng = 6, mplus = 8, boss = 7 }
 local MIN_WIDTH, MIN_HEIGHT = 560, 220
 local DEFAULT_WIDTH, DEFAULT_HEIGHT = 620, 420
--- Filtres (bas de la fenêtre) : clé, libellé de l'infobulle, abrégé à droite de la case, description.
+-- Filtres (pastilles du bas de la fenêtre) : clé, libellé, description (infobulle).
 local FILTERS = {
-	{ key = "conn", label = L["Connexions"], short = L["Con."], tip = L["Connexions et déconnexions (avec le temps joué)."] },
-	{ key = "ach", label = L["Hauts faits"], short = L["H-F"], tip = L["Hauts faits obtenus."] },
-	{ key = "delve", label = L["Gouffres"], short = L["Gou."], tip = L["Entrées dans un gouffre et gouffres (ou sections) terminés."] },
-	{ key = "dungeon", label = L["Donjons"], short = L["Don."], tip = L["Entrées dans un donjon, donjons terminés et clés mythiques+."] },
-	{ key = "raid", label = L["Raids"], short = L["Rai."], tip = L["Entrées dans un raid et boss de raid vaincus."] },
-	{ key = "coll", label = L["Collections"], short = L["Col."], tip = L["Jouets, montures et mascottes obtenus."] },
-	{ key = "rep", label = L["Renom et réputation"], short = L["Rép."], tip = L["Paliers de renom et rangs de réputation "
+	{ key = "conn", label = L["Connexions"], tip = L["Connexions et déconnexions (avec le temps joué)."] },
+	{ key = "ach", label = L["Hauts faits"], tip = L["Hauts faits obtenus."] },
+	{ key = "delve", label = L["Gouffres"], tip = L["Entrées dans un gouffre et gouffres (ou sections) terminés."] },
+	{ key = "dungeon", label = L["Donjons"], tip = L["Entrées dans un donjon, donjons terminés et clés mythiques+."] },
+	{ key = "raid", label = L["Raids"], tip = L["Entrées dans un raid et boss de raid vaincus."] },
+	{ key = "coll", label = L["Collections"], tip = L["Jouets, montures et mascottes obtenus."] },
+	{ key = "rep", label = L["Renom et réputation"], tip = L["Paliers de renom et rangs de réputation "
 		.. "atteints (amitié comprise)."] },
-	{ key = "social", label = L["Social"], short = L["Soc."], tip = L["Amis (du personnage ou Battle.net) ajoutés ou "
+	{ key = "social", label = L["Social"], tip = L["Amis (du personnage ou Battle.net) ajoutés ou "
 		.. "retirés, guildes et communautés rejointes ou quittées."] },
 }
 local CATEGORY_OF_KIND = { ["in"] = "conn", out = "conn", ach = "ach", delve = "delve", dng = "dungeon",
 	mplus = "dungeon", boss = "raid", toy = "coll", mount = "coll", pet = "coll", renown = "rep", rep = "rep",
 	friend = "social", guild = "social", club = "social" }
 local CATEGORY_OF_ENTRY = { delve = "delve", party = "dungeon", raid = "raid" }
+-- Icônes du jeu (Interface\Icons) par type d'événement (liste et frise, mêmes que le site Histoire)
+-- et par catégorie de filtre (pastilles du bas de la fenêtre). Absentes d'un client (WoW Forever) :
+-- point d'interrogation.
+local ICONS = {
+	ach = "achievement_general", delve = "ui_delves", dng = "achievement_dungeon_gloryofthehero",
+	mplus = "achievement_challengemode_gold", boss = "achievement_boss_ragnaros", toy = "inv_misc_toy_10",
+	mount = "ability_mount_ridinghorse", pet = "inv_box_petcarrier_01", renown = "achievement_reputation_08",
+	rep = "achievement_reputation_01", friend = "achievement_guildperk_everybodysfriend",
+	guild = "inv_shirt_guildtabard_01", club = "inv_misc_groupneedmore", grp = "inv_misc_groupneedmore",
+	lvl = "achievement_level_80", ilvl = "inv_sword_04", enter = "spell_arcane_portaldalaran",
+}
+local CATEGORY_ICONS = {
+	conn = "spell_holy_borrowedtime", ach = ICONS.ach, delve = ICONS.delve, dungeon = ICONS.dng, raid = ICONS.boss,
+	coll = ICONS.pet, rep = ICONS.renown, social = ICONS.friend,
+}
+local PATCH_ICON = "inv_scroll_03"
+local FALLBACK_ICON = "Interface\\Icons\\INV_Misc_QuestionMark"
+
+-- Pose l'icône nommée (Interface\Icons\<nom>), ou le point d'interrogation si le client ne l'a pas.
+local function SetIcon(texture, name)
+	if not (name and texture:SetTexture("Interface\\Icons\\" .. name)) then
+		texture:SetTexture(FALLBACK_ICON)
+	end
+end
+
+-- Icône d'une ligne d'événement : celle de son type ; entrée d'instance : celle de son genre
+-- (gouffre, donjon, raid).
+local function SetEventIcon(texture, line)
+	local name = ICONS[line.kind]
+	if line.kind == "enter" and line.fields then
+		name = CATEGORY_ICONS[CATEGORY_OF_ENTRY[line.fields[6]] or ""] or name
+	end
+	SetIcon(texture, name)
+end
 -- Sorties de patchs (Retail, date des serveurs européens : le mercredi), écrites en vert dans
 -- l'en-tête du jour, pour les mois affichés et, à venir, toujours (case « Ext » en bas à droite de
 -- la fenêtre, PolypodeHistoireDB.showPatches). **À compléter à chaque patch**, dès sa date officielle
@@ -410,6 +444,14 @@ local function BuildItems()
 		return a > b
 	end)
 	local durations = SessionDurations(ns.GetDays())
+	-- Temps joué d'un jour : durées des déconnexions de ce jour (tous personnages, filtres ignorés).
+	local function playedOn(day)
+		local sum = 0
+		for _, event in ipairs(ns.GetDays()[day] or {}) do
+			sum = sum + (durations[event] or 0)
+		end
+		return sum
+	end
 	local items = {}
 	local year, month
 	for _, day in ipairs(days) do
@@ -429,7 +471,7 @@ local function BuildItems()
 				local list = lists[day]
 				items[#items + 1] = { header = 3, key = day,
 					label = L["%s %d %s"]:format(WEEKDAYS[tonumber(date("%w", t)) + 1], tonumber(day:sub(9, 10)),
-						MONTHS_IN_TEXT[tonumber(day:sub(6, 7))]), count = #list, patch = patches[day] }
+						MONTHS_IN_TEXT[tonumber(day:sub(6, 7))]), count = #list, patch = patches[day], played = playedOn(day) }
 				if IsOpen(day) then
 					for _, line in ipairs(DayLines(list, durations)) do
 						items[#items + 1] = line
@@ -439,28 +481,6 @@ local function BuildItems()
 		end
 	end
 	return items
-end
-
-local INDENT = { [1] = "", [2] = "    ", [3] = "        " }
-
-local function FormatItem(item)
-	if item.header then
-		local mark = IsOpen(item.key) and "-" or "+"
-		local color = item.header == 3 and "|cffffffff" or "|cffffd200"
-		if item.header == 3 and item.count == 0 then
-			mark = " " -- jour de patch sans événement : rien à déplier
-		end
-		local isFuture = item.header == 3 and item.key > ns.DayOf(GetServerTime())
-		local text = INDENT[item.header] .. "|cff999999" .. mark .. "|r " .. color .. item.label .. "|r"
-		if item.count > 0 then
-			text = text .. "  |cff999999(" .. item.count .. ")|r"
-		end
-		if item.patch then
-			text = text .. "  " .. PATCH_COLOR .. item.patch .. (isFuture and " " .. L["(à venir)"] or "") .. "|r"
-		end
-		return text
-	end
-	return "            |cff999999" .. date("%H:%M", item.time) .. "|r  " .. EventText(item)
 end
 
 local function ItemTooltip(item)
@@ -583,6 +603,99 @@ local function MakeButton(parent, text, width, onClick, tip)
 	return button
 end
 
+-- PASTILLES DE FILTRE (bas de la fenêtre) ---------------------------------------------------------
+
+local CHIP_H, CHIP_GAP, CHIP_ICON = 20, 4, 14
+
+-- Pastille : icône, libellé, fond et bord (dorés quand cochée, RefreshChips). onEnter : infobulle.
+local function CreateChip(parent, iconName, onClick, onEnter)
+	local chip = CreateFrame("Button", nil, parent, "BackdropTemplate")
+	chip:SetHeight(CHIP_H)
+	chip:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Buttons\\WHITE8X8", edgeSize = 1 })
+	chip.icon = chip:CreateTexture(nil, "ARTWORK")
+	chip.icon:SetSize(CHIP_ICON, CHIP_ICON)
+	chip.icon:SetPoint("LEFT", 4, 0)
+	chip.icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
+	SetIcon(chip.icon, iconName)
+	chip.label = chip:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+	chip.label:SetPoint("LEFT", chip.icon, "RIGHT", 4, 0)
+	chip.label:SetWordWrap(false)
+	local hover = chip:CreateTexture(nil, "HIGHLIGHT")
+	hover:SetAllPoints()
+	hover:SetColorTexture(1, 1, 1, 0.08)
+	chip:SetScript("OnClick", onClick)
+	chip:SetScript("OnEnter", onEnter)
+	chip:SetScript("OnLeave", GameTooltip_Hide)
+	return chip
+end
+
+local function PaintChip(chip, on, dim)
+	if on then
+		chip:SetBackdropColor(1, 0.82, 0.2, 0.22)
+		chip:SetBackdropBorderColor(1, 0.82, 0.2, 0.9)
+		chip.label:SetTextColor(1, 1, 1)
+	else
+		chip:SetBackdropColor(0, 0, 0, 0.35)
+		chip:SetBackdropBorderColor(0.45, 0.45, 0.45, 0.8)
+		chip.label:SetTextColor(0.75, 0.75, 0.75)
+	end
+	chip.icon:SetDesaturated(dim and true or false)
+	chip.icon:SetAlpha(dim and 0.6 or 1)
+end
+
+-- État des pastilles : cochées en doré ; si au moins une est cochée, les autres sont estompées.
+local function RefreshChips()
+	if not frame or not frame.filterChips then
+		return
+	end
+	local settings = Settings()
+	local any = next(settings.filters) ~= nil
+	for _, chip in ipairs(frame.filterChips) do
+		local on = settings.filters[chip.filter.key] == true
+		PaintChip(chip, on, any and not on)
+	end
+	PaintChip(frame.patchChip, settings.showPatches, not IS_RETAIL)
+end
+
+-- Disposition selon la largeur de la fenêtre : tous les libellés, sinon ceux des seules pastilles
+-- cochées, sinon icônes seules (le nom reste dans l'infobulle). Refaite à chaque coche.
+local function LayoutChips()
+	if not frame or not frame.filterChips then
+		return
+	end
+	local available = frame:GetWidth() - 10 - frame.patchChip:GetWidth() - 24 - 12
+	local chosen
+	local filters = Settings().filters
+	for mode = 1, 3 do
+		local total = 0
+		for _, chip in ipairs(frame.filterChips) do
+			-- 1 : tous les libellés ; 2 : libellés des seules pastilles cochées ; 3 : icônes seules.
+			local named = mode == 1 or (mode == 2 and filters[chip.filter.key])
+			chip.label:SetText(named and chip.filter.label or "")
+			chip.label:SetShown(named and true or false)
+			local width = named and (CHIP_ICON + 14 + chip.label:GetStringWidth()) or (CHIP_ICON + 8)
+			chip.wanted = math.ceil(width)
+			total = total + chip.wanted + CHIP_GAP
+		end
+		chosen = mode
+		if total <= available then
+			break
+		end
+	end
+	local previous
+	for _, chip in ipairs(frame.filterChips) do
+		chip:SetWidth(chip.wanted)
+		chip:ClearAllPoints()
+		if previous then
+			chip:SetPoint("LEFT", previous, "RIGHT", CHIP_GAP, 0)
+		else
+			chip:SetPoint("BOTTOMLEFT", 10, 8)
+		end
+		previous = chip
+	end
+	frame.chipMode = chosen
+end
+
 local function Build()
 	local settings = Settings()
 	frame = CreateFrame("Frame", "PolypodeHistoireFrame", UIParent, "BackdropTemplate")
@@ -615,16 +728,15 @@ local function Build()
 	closeBtn:SetPoint("TOPRIGHT", -4, -4)
 	frame.CloseButton = closeBtn
 
-	-- Bas de la fenêtre : cases de filtre à gauche, case « Ext » (sorties des patchs et extensions) à
-	-- droite, contre la poignée de redimensionnement ; titre centré dans la barre de titre.
-	local patchCheck = CreateFrame("CheckButton", nil, frame, "UICheckButtonTemplate")
-	patchCheck:SetSize(22, 22)
-	patchCheck:SetChecked(settings.showPatches)
-	patchCheck:SetScript("OnClick", function(self)
-		Settings().showPatches = self:GetChecked() and true or false
+	-- Bas de la fenêtre : pastilles de filtre à gauche (icône et libellé de la catégorie ; dorée quand
+	-- cochée), pastille « Ext » (sorties des patchs et extensions) à droite, contre la poignée de
+	-- redimensionnement ; titre centré dans la barre de titre. Fenêtre étroite : libellés abrégés,
+	-- puis icônes seules (LayoutChips).
+	local patchChip = CreateChip(frame, PATCH_ICON, function()
+		Settings().showPatches = not Settings().showPatches
+		RefreshChips()
 		ns.Refresh()
-	end)
-	patchCheck:SetScript("OnEnter", function(self)
+	end, function(self)
 		GameTooltip:SetOwner(self, "ANCHOR_TOP")
 		GameTooltip:AddLine(L["Extensions et patchs"])
 		GameTooltip:AddLine(L["Cochée : les jours de sortie des patchs et des extensions sont écrits en vert avec "
@@ -634,43 +746,24 @@ local function Build()
 		end
 		ShowTooltip()
 	end)
-	patchCheck:SetScript("OnLeave", GameTooltip_Hide)
-	if P.SkinCheckBox then
-		P.SkinCheckBox(patchCheck)
-	end
-	local patchText = patchCheck.Text or patchCheck.text
-	if patchText then
-		patchText:SetText(L["Ext"])
-		patchText:SetFontObject("GameFontHighlightSmall")
-		patchText:ClearAllPoints()
-		patchText:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -24, 13)
-		patchCheck:SetPoint("RIGHT", patchText, "LEFT", -3, 0)
-		patchCheck:SetHitRectInsets(0, -(patchText:GetStringWidth() + 3), 0, 0)
-	else
-		patchCheck:SetPoint("BOTTOMRIGHT", -24, 8)
-	end
-	frame.patchCheck = patchCheck
+	patchChip.label:SetText(L["Ext"])
+	patchChip:SetWidth(patchChip.label:GetStringWidth() + 30)
+	patchChip:SetPoint("BOTTOMRIGHT", -24, 8)
+	frame.patchChip = patchChip
 
 	local title = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
 	title:SetPoint("TOP", 0, -14)
 	title:SetText(L["Histoire"])
 	frame.TitleText = title
-	frame.filterChecks = {}
-	local previous
+	frame.filterChips = {}
 	for _, filter in ipairs(FILTERS) do
-		local check = CreateFrame("CheckButton", nil, frame, "UICheckButtonTemplate")
-		check:SetSize(22, 22)
-		if previous then
-			check:SetPoint("LEFT", previous, "RIGHT", 8, 0)
-		else
-			check:SetPoint("BOTTOMLEFT", 10, 8)
-		end
-		check:SetChecked(settings.filters[filter.key] == true)
-		check:SetScript("OnClick", function(self)
-			Settings().filters[filter.key] = self:GetChecked() and true or nil
+		local chip = CreateChip(frame, CATEGORY_ICONS[filter.key], function()
+			local filters = Settings().filters
+			filters[filter.key] = not filters[filter.key] or nil
+			LayoutChips() -- fenêtre étroite : le nom des pastilles cochées s'affiche
+			RefreshChips()
 			ns.Refresh()
-		end)
-		check:SetScript("OnEnter", function(self)
+		end, function(self)
 			GameTooltip:SetOwner(self, "ANCHOR_TOP")
 			GameTooltip:AddLine(filter.label)
 			GameTooltip:AddLine(filter.tip, 1, 1, 1, true)
@@ -678,29 +771,35 @@ local function Build()
 				.. "case cochée : tout le journal."], 0.7, 0.7, 0.7, true)
 			ShowTooltip()
 		end)
-		check:SetScript("OnLeave", GameTooltip_Hide)
-		if P.SkinCheckBox then
-			P.SkinCheckBox(check)
-		end
-		-- Libellé posé après le skin (EllesmereUI le collait à son cadre).
-		local text = check.Text or check.text
-		if text then
-			text:SetText(filter.short)
-			text:SetFontObject("GameFontHighlightSmall")
-			text:ClearAllPoints()
-			text:SetPoint("LEFT", check, "RIGHT", 3, 0)
-			check:SetHitRectInsets(0, -(text:GetStringWidth() + 3), 0, 0)
-			previous = text
-		else
-			previous = check
-		end
-		frame.filterChecks[#frame.filterChecks + 1] = check
+		chip.filter = filter
+		frame.filterChips[#frame.filterChips + 1] = chip
 	end
+	frame:HookScript("OnSizeChanged", LayoutChips)
+	LayoutChips()
+	RefreshChips()
 
 	listPanel = P.CreatePanel(frame, "")
 	listPanel:SetPoint("TOPLEFT", 12, -36)
 	listPanel:SetPoint("BOTTOMRIGHT", -12, 34)
-	P.CreateScrollList(listPanel, FormatItem, nil, { onClick = OnItemClick, tooltip = ItemTooltip })
+	-- Liste du journal (Liste.lua) : fil, numéros des jours, icônes ; clics et infobulles d'ici.
+	frame.list = ns.BuildList(listPanel, {
+		onClick = OnItemClick,
+		tooltip = ItemTooltip,
+		showTooltip = ShowTooltip,
+		isOpen = IsOpen,
+		eventText = EventText,
+		setIcon = SetEventIcon,
+		countText = function(n)
+			return L["%d événement(s)"]:format(n)
+		end,
+		playedText = function(seconds)
+			return L["%s de jeu"]:format(DurationText(seconds))
+		end,
+		patchText = function(item)
+			local isFuture = item.key > ns.DayOf(GetServerTime())
+			return PATCH_COLOR .. item.patch .. (isFuture and " " .. L["(à venir)"] or "") .. "|r"
+		end,
+	}, 28)
 
 	-- Boutons à droite de l'en-tête du panneau : « Exporter », puis « Tout replier / déplier ».
 	local exportBtn = MakeButton(listPanel, L["Exporter"], 70, AskExport, function()
@@ -811,6 +910,7 @@ function ns.Refresh()
 	if not frame or not frame:IsShown() then
 		return
 	end
+	RefreshChips()
 	local frise = Settings().view == "frise" and frame.frisePanel
 	for _, button in ipairs(frame.viewButtons) do
 		if button.view == (frise and "frise" or "liste") then
@@ -838,9 +938,9 @@ function ns.Refresh()
 	frame.collapseButton.collapseAll = anyOpen
 	frame.collapseButton:SetText(anyOpen and L["Tout replier"] or L["Tout déplier"])
 	listPanel.header:SetText(HeaderText())
-	listPanel.emptyText:SetText(next(Settings().filters) and L["Aucun événement pour les filtres cochés."]
+	frame.list.emptyText:SetText(next(Settings().filters) and L["Aucun événement pour les filtres cochés."]
 		or L["Aucun événement noté pour l'instant."])
-	P.SetListData(listPanel, items)
+	frame.list.SetItems(items)
 end
 P.RefreshHistoire = ns.Refresh
 
@@ -862,6 +962,9 @@ end
 local function OpenDay(day)
 	local settings = Settings()
 	settings.view = "liste"
+	if frame and frame.list then
+		frame.list.ScrollToKey(day) -- jour amené en haut de la liste
+	end
 	settings.open[day:sub(1, 4)], settings.open[day:sub(1, 7)], settings.open[day] = true, true, true
 	ns.Refresh()
 end
@@ -883,6 +986,10 @@ ns.H = {
 	MONTHS = MONTHS,
 	WEEKDAYS = WEEKDAYS,
 	MONTHS_IN_TEXT = MONTHS_IN_TEXT,
+	ICONS = ICONS,
+	PATCH_ICON = PATCH_ICON,
+	SetIcon = SetIcon,
+	SetEventIcon = SetEventIcon,
 }
 
 -- INTÉGRATION À POLYPODE --------------------------------------------------------------------------
