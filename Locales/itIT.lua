@@ -229,6 +229,7 @@ P.AddTranslations(ns.L, "itIT", {
 	["Seuil par échelle"] = "Soglia per scala",
 	["%s : poids %d et plus"] = "%s: peso %d e oltre",
 	["Connexions : montrées par les barres de session. Événements trop proches : regroupés (compteur), icône et texte du plus marquant."] = "Accessi: mostrati dalle barre di sessione. Eventi troppo vicini: raggruppati (contatore), icona e testo del più importante.",
+	["Présence : barres de séance en Jour et Semaine (total du jour dessous s'il y a la place) ; cases en Mois (par jour) et Tous (par semaine), plus foncées quand on a plus joué ; ligne « Tous » : tous les personnages."] = "Presenza: barre di sessione in Giorno e Settimana (totale del giorno sotto se c'è spazio); caselle in Mese (per giorno) e Tutto (per settimana), più scure quanto più si è giocato; riga «Tutto»: tutti i personaggi.",
 	["Événements"] = "Eventi",
 	["Période précédente (jour, semaine ou mois selon l'échelle)."] = "Periodo precedente (giorno, settimana o mese secondo la scala).",
 	["Importance des événements"] = "Importanza degli eventi",

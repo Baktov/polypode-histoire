@@ -57,6 +57,8 @@ local LABEL_H = 13
 local PATCH_STRIP = 20 -- bande des icônes de patch, au-dessus des événements
 local AXIS_H = 14
 local TOP_BAR = 30 -- barre du haut (chevrons, échelles)
+local LANE_MAX = 26 -- hauteur maximale d'une piste de présence (px)
+local TOTALS_MIN_H = 22 -- vue Semaine : total du jour écrit sous les barres à partir de cette hauteur
 local JOUR_MARGIN = 1800 -- vue Jour : marge autour de la plage jouée (s)
 local JOUR_MIN_SPAN = 3 * 3600
 local PATCH_RGB = { 0.25, 1, 0.25 }
@@ -196,6 +198,34 @@ local function Intervals(days)
 	return list
 end
 
+-- Temps joué par jour et par personnage : played[jour][clé] = secondes, séances coupées à minuit.
+local function PlayedByDay(sessions)
+	local played = {}
+	for _, s in ipairs(sessions) do
+		local t = s.start
+		while t < s.stop do
+			local day = ns.DayOf(t)
+			local nextStart = DayStart(AddDays(day, 1))
+			local stop = math.min(s.stop, nextStart)
+			played[day] = played[day] or {}
+			played[day][s.key] = (played[day][s.key] or 0) + (stop - t)
+			if nextStart <= t then
+				break -- sécurité (changement d'heure mal lu) : pas de boucle sans fin
+			end
+			t = stop
+		end
+	end
+	return played
+end
+
+-- Intensité d'une case de chaleur (racine : les petites parties restent visibles), 0 si rien.
+local function HeatLevel(value, max)
+	if not value or value <= 0 then
+		return 0
+	end
+	return 0.18 + 0.82 * math.sqrt(value / math.max(max, 1))
+end
+
 -- Texte court sous l'icône (f[4] : premier champ après heure~clé~type).
 local function ShortText(line)
 	local f, n = line.fields, #line.keys > 1 and (" ×" .. #line.keys) or ""
@@ -256,7 +286,8 @@ local function BuildModel(width)
 		end
 	end
 	local sessions = {}
-	for _, s in ipairs(Intervals(days)) do
+	local allSessions = Intervals(days)
+	for _, s in ipairs(allSessions) do
 		if s.stop >= period.start and s.start < period.stop then
 			sessions[#sessions + 1] = s
 		end
@@ -329,6 +360,79 @@ local function BuildModel(width)
 			lane.total = lane.total + (to - from)
 		end
 	end
+	-- Colonnes de présence : jours (Semaine, Mois) ou semaines du lundi (Tous) ; cases de chaleur par
+	-- personnage (Mois, Tous : à la place des barres ; Semaine : fond discret sous les barres) et
+	-- clic sur une case : l'échelle en dessous (Tous, Mois → semaine ; Semaine → jour).
+	local columns = {}
+	local function addColumn(first, stopKey, list)
+		local x1, x2 = x(DayStart(first)), x(DayStart(stopKey))
+		if x2 > x1 then
+			local wd = Weekday(first)
+			columns[#columns + 1] = { day = first, days = list, x = x1, w = x2 - x1,
+				weekend = #list == 1 and (wd == 0 or wd == 6),
+				zoom = state.scale == "semaine" and "jour" or "semaine" }
+		end
+	end
+	if state.scale == "semaine" or state.scale == "mois" then
+		local day = period.startKey
+		while day < period.endKey do
+			addColumn(day, AddDays(day, 1), { day })
+			day = AddDays(day, 1)
+		end
+	elseif state.scale == "tous" then
+		local monday = AddDays(period.startKey, -((Weekday(period.startKey) + 6) % 7))
+		while monday < period.endKey do
+			local list = {}
+			for i = 0, 6 do
+				list[#list + 1] = AddDays(monday, i)
+			end
+			addColumn(monday, AddDays(monday, 7), list)
+			monday = AddDays(monday, 7)
+		end
+	end
+	local heat = state.scale == "mois" or state.scale == "tous"
+	local played = PlayedByDay(allSessions)
+	local function playedIn(key, list)
+		local sum = 0
+		for _, d in ipairs(list) do
+			local perChar = played[d]
+			if perChar then
+				if key then
+					sum = sum + (perChar[key] or 0)
+				else
+					for k, v in pairs(perChar) do
+						if lanesByKey[k] then
+							sum = sum + v
+						end
+					end
+				end
+			end
+		end
+		return sum
+	end
+	local maxCell, maxSum = 0, 0
+	local sum = #lanes > 1 and { cells = {}, total = 0 } or nil
+	for _, lane in ipairs(lanes) do
+		lane.cells = {}
+		local total = 0
+		for i, col in ipairs(columns) do
+			lane.cells[i] = playedIn(lane.key, col.days)
+			maxCell = math.max(maxCell, lane.cells[i])
+			total = total + lane.cells[i]
+		end
+		if heat then
+			lane.total = total -- temps joué dans la période (jours entiers)
+		end
+	end
+	if sum then
+		for i, col in ipairs(columns) do
+			sum.cells[i] = playedIn(nil, col.days)
+			maxSum = math.max(maxSum, sum.cells[i])
+		end
+		for _, lane in ipairs(lanes) do
+			sum.total = sum.total + lane.total
+		end
+	end
 	table.sort(lanes, function(a, b)
 		return a.total > b.total
 	end)
@@ -398,7 +502,7 @@ local function BuildModel(width)
 	end
 
 	return { period = period, clusters = clusters, lanes = lanes, ticks = ticks, patches = patches, zones = zones,
-		count = #items }
+		count = #items, columns = columns, heat = heat, sum = sum, maxCell = maxCell, maxSum = maxSum }
 end
 
 -- RECYCLAGE DES ÉLÉMENTS --------------------------------------------------------------------------
@@ -558,6 +662,10 @@ local function ImportanceText()
 	lines[#lines + 1] = ""
 	lines[#lines + 1] = L["Connexions : montrées par les barres de session. Événements trop proches : regroupés "
 		.. "(compteur), icône et texte du plus marquant."]
+	lines[#lines + 1] = ""
+	lines[#lines + 1] = L["Présence : barres de séance en Jour et Semaine (total du jour dessous s'il y a la place) ; "
+		.. "cases en Mois (par jour) et Tous (par semaine), plus foncées quand on a plus joué ; ligne « Tous » : tous "
+		.. "les personnages."]
 	return table.concat(lines, "\n")
 end
 
@@ -603,6 +711,41 @@ local function CreateBar()
 		end
 	end)
 	return bar
+end
+
+-- Case de chaleur : infobulle (qui, quand, temps joué) ; clic → l'échelle en dessous.
+local function CellTooltip(self)
+	local info = self.info
+	if not info then
+		return
+	end
+	local col = info.column
+	GameTooltip:SetOwner(self, "ANCHOR_BOTTOM")
+	GameTooltip:AddLine(info.label)
+	GameTooltip:AddLine(#col.days == 1 and DayShort(col.day) or PeriodLabel("semaine", Period("semaine", col.day)),
+		0.6, 0.6, 0.6)
+	if (info.value or 0) > 0 then
+		GameTooltip:AddLine(H.DurationText(info.value), 1, 1, 1)
+	end
+	GameTooltip:AddLine(col.zoom == "jour" and L["Clic : afficher ce jour"] or L["Clic : afficher cette semaine"],
+		0.7, 0.7, 0.7)
+	H.ShowTooltip()
+end
+
+local function CreateCell()
+	local cell = CreateFrame("Button", nil, track)
+	cell.fill = cell:CreateTexture(nil, "ARTWORK")
+	cell.fill:SetAllPoints()
+	cell:SetHighlightTexture("Interface\\Buttons\\WHITE8X8")
+	cell:GetHighlightTexture():SetVertexColor(1, 1, 1, 0.12)
+	cell:SetScript("OnEnter", CellTooltip)
+	cell:SetScript("OnLeave", GameTooltip_Hide)
+	cell:SetScript("OnClick", function(self)
+		if self.info then
+			ZoomTo({ scale = self.info.column.zoom, day = self.info.column.day })
+		end
+	end)
+	return cell
 end
 
 local function CreateZone()
@@ -664,6 +807,10 @@ local function Render()
 		probe:SetText(H.CharName(lane.key) .. "  " .. H.DurationText(lane.total))
 		nameWidth = math.max(nameWidth, probe:GetStringWidth() + 12)
 	end
+	if model.sum then
+		probe:SetText(L["Tous"] .. "  " .. H.DurationText(model.sum.total))
+		nameWidth = math.max(nameWidth, probe:GetStringWidth() + 12)
+	end
 	probe:Hide()
 	local trackWidth = math.max(width - nameWidth - 8, 50)
 	model = BuildModel(trackWidth)
@@ -691,15 +838,22 @@ local function Render()
 	track:SetPoint("TOPLEFT", area, "TOPLEFT", nameWidth, 0)
 	track:SetPoint("BOTTOMRIGHT", area, "BOTTOMRIGHT", 0, 0)
 
-	-- Hauteurs : bande des patchs, deux rangées d'événements, pistes, axe.
+	-- Hauteurs : bande des patchs, deux rangées d'événements, pistes (ligne « Tous » comprise), axe.
 	local height = area:GetHeight()
 	local strip = #model.patches > 0 and PATCH_STRIP or 0
 	local rowH = ICON + LABEL_H + 4
 	local eventsH = strip + 2 * rowH + 4
-	local laneCount = math.max(#model.lanes, 1)
-	local laneH = math.max(8, math.min(18, math.floor((height - eventsH - AXIS_H) / laneCount)))
+	local rows = {}
+	if model.sum then
+		rows[1] = { sum = model.sum, total = model.sum.total, cells = model.sum.cells }
+	end
+	for _, lane in ipairs(model.lanes) do
+		rows[#rows + 1] = lane
+	end
+	local laneCount = math.max(#rows, 1)
+	local laneH = math.max(8, math.min(LANE_MAX, math.floor((height - eventsH - AXIS_H) / laneCount)))
 	local lanesTop = eventsH
-	local axisTop = lanesTop + laneH * #model.lanes
+	local axisTop = lanesTop + laneH * #rows
 
 	-- Libellé de la piste des événements.
 	local evLabel = Acquire(texts)
@@ -732,8 +886,18 @@ local function Render()
 		button:SetSize(math.max(zone.w, 1), axisTop + AXIS_H - strip)
 		button:SetFrameLevel(track:GetFrameLevel() + 1)
 	end
+	-- Week-ends (Semaine, Mois) : teinte dorée très légère.
+	for _, col in ipairs(model.columns) do
+		if col.weekend then
+			local tint = Acquire(lines)
+			tint:ClearAllPoints()
+			tint:SetPoint("TOPLEFT", track, "TOPLEFT", col.x, -strip)
+			tint:SetSize(col.w, axisTop - strip)
+			tint:SetColorTexture(1, 0.82, 0.2, 0.05)
+		end
+	end
 	-- Séparateurs horizontaux des pistes.
-	for i = 0, #model.lanes do
+	for i = 0, #rows do
 		local line = Acquire(lines)
 		line:ClearAllPoints()
 		line:SetPoint("TOPLEFT", area, "TOPLEFT", 0, -(lanesTop + laneH * i))
@@ -761,7 +925,7 @@ local function Render()
 		button.cluster = cluster
 		button:ClearAllPoints()
 		button:SetPoint("TOP", track, "TOPLEFT", cluster.x, -(strip + 2 + cluster.row * rowH))
-		button:SetFrameLevel(track:GetFrameLevel() + 3)
+		button:SetFrameLevel(track:GetFrameLevel() + 4)
 		SetIcon(button.icon, ICONS[cluster.main.kind])
 		local n = #cluster.items
 		button.badge:SetText(n > 1 and n or "")
@@ -772,28 +936,78 @@ local function Render()
 		end
 	end
 
-	-- Sessions : nom et temps joué à gauche, barres à la couleur de classe.
-	for i, lane in ipairs(model.lanes) do
+	-- Présence, une piste par ligne (« Tous » en tête, dorée, puis les personnages) : nom et temps joué
+	-- à gauche ; Mois et Tous : cases de chaleur ; Jour et Semaine : barres de séance à leur heure
+	-- (Semaine : fond de chaleur discret et total du jour sous les barres s'il y a la place).
+	local cells = Pool("cell", CreateCell)
+	local withTotals = state.scale == "semaine" and laneH >= TOTALS_MIN_H
+	for i, row in ipairs(rows) do
 		local y = lanesTop + laneH * (i - 1)
 		local name = Acquire(texts)
 		name:ClearAllPoints()
 		name:SetPoint("LEFT", area, "TOPLEFT", 0, -(y + laneH / 2))
-		name:SetText(H.CharName(lane.key))
+		name:SetText(row.sum and ("|cffffd200" .. L["Tous"] .. "|r") or H.CharName(row.key))
 		local played = Acquire(texts)
 		played:ClearAllPoints()
 		played:SetPoint("RIGHT", area, "TOPLEFT", nameWidth - 8, -(y + laneH / 2))
-		played:SetText("|cff999999" .. H.DurationText(lane.total) .. "|r")
-		local entry = P.db and P.db.roster and P.db.roster[lane.key]
-		local color = entry and entry.class and RAID_CLASS_COLORS and RAID_CLASS_COLORS[entry.class]
-		for _, b in ipairs(lane.bars) do
-			local bar = Acquire(bars)
-			bar.session = b.session
-			bar:ClearAllPoints()
-			bar:SetPoint("TOPLEFT", track, "TOPLEFT", b.x, -(y + 3))
-			bar:SetSize(b.w, math.max(laneH - 6, 3))
-			bar:SetFrameLevel(track:GetFrameLevel() + 2)
-			bar.fill:SetColorTexture(color and color.r or 0.9, color and color.g or 0.7, color and color.b or 0.2,
-				b.session.open and 0.45 or 0.9)
+		played:SetText("|cff999999" .. H.DurationText(row.total) .. "|r")
+		local r, g, b = 1, 0.82, 0.2 -- doré : ligne « Tous », ou classe inconnue
+		if not row.sum then
+			local entry = P.db and P.db.roster and P.db.roster[row.key]
+			local color = entry and entry.class and RAID_CLASS_COLORS and RAID_CLASS_COLORS[entry.class]
+			if color then
+				r, g, b = color.r, color.g, color.b
+			end
+		end
+		local max = row.sum and model.maxSum or model.maxCell
+		local label = row.sum and L["Tous"] or H.CharName(row.key)
+
+		-- Cases de chaleur (Mois, Tous), ou fond discret (Semaine).
+		if model.heat or state.scale == "semaine" then
+			for c, col in ipairs(model.columns) do
+				local level = HeatLevel(row.cells[c], max)
+				if model.heat or level > 0 then
+					local cell = Acquire(cells)
+					cell.info = { label = label, column = col, value = row.cells[c] }
+					cell:ClearAllPoints()
+					cell:SetPoint("TOPLEFT", track, "TOPLEFT", col.x + 1, -(y + 2))
+					cell:SetSize(math.max(col.w - 2, 1), math.max(laneH - 4, 2))
+					cell:SetFrameLevel(track:GetFrameLevel() + 2)
+					if level == 0 then
+						cell.fill:SetColorTexture(1, 1, 1, 0.03)
+					else
+						cell.fill:SetColorTexture(r, g, b, (model.heat and 0.85 or 0.3) * level)
+					end
+				end
+			end
+		end
+
+		-- Barres de séance (Jour, Semaine) ; ligne « Tous » : toutes les séances, dorées et estompées.
+		if not model.heat then
+			local list = row.sum and model.lanes or { row }
+			local barH = withTotals and math.max(laneH - 15, 4) or math.max(laneH - 6, 3)
+			for _, lane in ipairs(list) do
+				for _, bb in ipairs(lane.bars) do
+					local bar = Acquire(bars)
+					bar.session = bb.session
+					bar:ClearAllPoints()
+					bar:SetPoint("TOPLEFT", track, "TOPLEFT", bb.x, -(y + 3))
+					bar:SetSize(bb.w, barH)
+					bar:SetFrameLevel(track:GetFrameLevel() + 3)
+					bar.fill:SetColorTexture(r, g, b, row.sum and 0.5 or (bb.session.open and 0.45 or 0.9))
+				end
+			end
+			-- Total de chaque jour, sous les barres.
+			if withTotals then
+				for c, col in ipairs(model.columns) do
+					if (row.cells[c] or 0) > 0 then
+						local text = Acquire(texts)
+						text:ClearAllPoints()
+						text:SetPoint("BOTTOM", track, "TOPLEFT", col.x + col.w / 2, -(y + laneH - 1))
+						text:SetText("|cff999999" .. H.DurationText(row.cells[c]) .. "|r")
+					end
+				end
+			end
 		end
 	end
 end

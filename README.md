@@ -67,8 +67,12 @@ journal sur un axe horizontal :
   **clic** : ce jour dans la liste.
 - **Clic ailleurs sur la frise** (zone éclairée au survol, barres de session comprises) : en
   **Mois**, la semaine cliquée s'affiche ; en **Semaine**, le jour cliqué.
-- **Une piste par personnage** : ses sessions de jeu à la couleur de sa classe (survol : « de 21:06 à 00:20 »,
-  durée), avec le temps joué sur la période à côté du nom.
+- **Présence** : une ligne **Tous** (dorée, tous les personnages) puis une piste par personnage, à la
+  couleur de sa classe, avec le temps joué sur la période à côté du nom. **Jour** et **Semaine** : les
+  sessions à leur heure (survol : « de 21:06 à 00:20 », durée) ; en Semaine, fond plus foncé les jours
+  les plus joués et total du jour sous les barres quand la piste est assez haute. **Mois** et **Tous** :
+  une case par jour (Mois) ou par semaine (Tous), plus foncée quand on a plus joué (survol : temps joué ;
+  clic : cette semaine). Week-ends légèrement teintés.
 - **Sorties de patchs** (Retail, case **Ext**) : trait vert et icône bordée de vert.
 - **Importance** (bouton **?**) : plus la période est longue, moins on montre de détails. Poids :
   3 boss de raid, clé M+, niveau, monture ; 2 haut fait, donjon, renom, guilde ; 1 gouffre, jouet,
@@ -190,6 +194,7 @@ other language).*
 
 ## Version
 
+`1.15.0` : frise : présence lisible à toutes les échelles : cases de chaleur par jour (Mois) ou par semaine (Tous) à la place des barres trop fines, fond de chaleur et total du jour en Semaine, ligne « Tous » cumulant les personnages, week-ends teintés (même représentation que le site Histoire v2).
 `1.14.1` : redimensionnement par la poignée du coin corrigé : la fenêtre ne s'agrandit plus d'un coup hors de l'écran (coin haut-gauche fixe, taille bornée à l'écran).
 `1.14.0` : double-clic sur la barre de titre : retour à la taille par défaut (Polypode 2.12).
 `1.13.0` : Polypode Histoire en anglais, allemand, espagnol, italien et portugais du Brésil, selon la langue choisie dans Polypode (History, Chronik, Historia, Storia, Histórico) ; tout le journal, anciens événements compris, s'écrit dans la langue choisie (phrases construites à l'affichage). *Translated into English, German, Spanish, Italian and Brazilian Portuguese.*

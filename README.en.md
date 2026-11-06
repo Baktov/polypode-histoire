@@ -64,8 +64,12 @@ the journal on a horizontal axis:
   **Hover**: the details (time of each character, full text); **click**: this day in the list.
 - **Click elsewhere on the timeline** (area lit on hover, session bars included): in **Month**, the
   clicked week shows; in **Week**, the clicked day.
-- **One track per character**: their play sessions in their class color (hover: "from 21:06 to
-  00:20", duration), with the time played over the period next to the name.
+- **Presence**: an **All** row (gold, every character) then one track per character, in their class
+  color, with the time played over the period next to the name. **Day** and **Week**: sessions at
+  their time (hover: "from 21:06 to 00:20", duration); in Week, a darker background on the days
+  played most and the day total under the bars when the track is tall enough. **Month** and **All**:
+  one square per day (Month) or per week (All), darker when you played more (hover: time played;
+  click: that week). Weekends slightly tinted.
 - **Patch releases** (Retail, **Exp** box): green line and icon with a green border.
 - **Importance** (**?** button): the longer the period, the fewer details shown. Weights: 3 raid
   boss, M+ key, level, mount; 2 achievement, dungeon, renown, guild; 1 delve, toy, pet, reputation,

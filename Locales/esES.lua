@@ -229,6 +229,7 @@ P.AddTranslations(ns.L, "esES", {
 	["Seuil par échelle"] = "Umbral por escala",
 	["%s : poids %d et plus"] = "%s: peso %d o más",
 	["Connexions : montrées par les barres de session. Événements trop proches : regroupés (compteur), icône et texte du plus marquant."] = "Conexiones: mostradas por las barras de sesión. Eventos demasiado cercanos: agrupados (contador), icono y texto del más destacado.",
+	["Présence : barres de séance en Jour et Semaine (total du jour dessous s'il y a la place) ; cases en Mois (par jour) et Tous (par semaine), plus foncées quand on a plus joué ; ligne « Tous » : tous les personnages."] = "Presencia: barras de sesión en Día y Semana (total del día debajo si hay sitio); casillas en Mes (por día) y Todo (por semana), más oscuras cuanto más se jugó; fila «Todo»: todos los personajes.",
 	["Événements"] = "Eventos",
 	["Période précédente (jour, semaine ou mois selon l'échelle)."] = "Periodo anterior (día, semana o mes según la escala).",
 	["Importance des événements"] = "Importancia de los eventos",

@@ -229,6 +229,7 @@ P.AddTranslations(ns.L, "enUS", {
 	["Seuil par échelle"] = "Threshold per scale",
 	["%s : poids %d et plus"] = "%s: weight %d and above",
 	["Connexions : montrées par les barres de session. Événements trop proches : regroupés (compteur), icône et texte du plus marquant."] = "Logins: shown by the session bars. Events too close together: grouped (counter), icon and text of the most notable one.",
+	["Présence : barres de séance en Jour et Semaine (total du jour dessous s'il y a la place) ; cases en Mois (par jour) et Tous (par semaine), plus foncées quand on a plus joué ; ligne « Tous » : tous les personnages."] = "Presence: session bars in Day and Week (day total below when there is room); squares in Month (per day) and All (per week), darker when you played more; \"All\" row: every character.",
 	["Événements"] = "Events",
 	["Période précédente (jour, semaine ou mois selon l'échelle)."] = "Previous period (day, week or month depending on the scale).",
 	["Importance des événements"] = "Event importance",
