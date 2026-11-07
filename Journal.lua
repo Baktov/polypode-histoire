@@ -95,6 +95,70 @@ local function Parse(event)
 end
 ns.Parse = Parse
 
+-- CLÉ DU PERSONNAGE (1.16.1). Retail : « Prénom-Royaume » (P.GetCharKey). WoW Forever : le royaume
+-- (GetRealmName, « CAMWOW EU4 Realm 7 PvE ») est celui de la couche du serveur et change d'une
+-- session à l'autre ; le journal note donc « Prénom Nom » (noms uniques par région), toujours avec
+-- une espace (le site Histoire le reconnaît ainsi), nom de famille d'UnitName. Repli sur
+-- P.GetCharKey si le nom de famille est inconnu ou Polypode trop ancien.
+function ns.CharKey()
+	if P.HasSurnames and P.HasSurnames() and P.UnitNameParts then
+		local name, _, surname = P.UnitNameParts("player")
+		if name and surname and surname ~= "" then
+			return name .. " " .. surname
+		end
+	end
+	return P.GetCharKey()
+end
+
+-- Clé du personnage joué, nouvelle ou ancienne forme (événements notés avant la 1.16.1).
+local function IsMine(key)
+	return key == ns.CharKey() or key == P.GetCharKey()
+end
+
+-- Entrée du roster de Polypode d'une clé « Prénom-Royaume », ou d'une clé « Prénom Nom » (Forever,
+-- cherchée par prénom et nom de famille). nil si inconnue.
+function ns.RosterEntry(key)
+	local roster = P.db and P.db.roster
+	if not roster or not key then
+		return nil
+	end
+	if roster[key] then
+		return roster[key]
+	end
+	local first, surname = key:match("^(%S+) (.+)$")
+	if first then
+		for _, entry in pairs(roster) do
+			if entry.name == first and entry.surname == surname then
+				return entry
+			end
+		end
+	end
+	return nil
+end
+
+-- Identité d'un personnage pour regrouper ses événements (séances, lignes, pistes de la frise) :
+-- Forever, « Prénom Nom » pour toute clé dont le roster connaît le nom de famille (anciennes clés
+-- « Prénom-Royaume » de chaque couche comprises) ; sinon la clé telle quelle.
+function ns.Identity(key)
+	local entry = key and P.db and P.db.roster and P.db.roster[key]
+	if entry and entry.name and entry.surname and entry.surname ~= "" then
+		return entry.name .. " " .. entry.surname
+	end
+	return key
+end
+
+-- Événement reçu : accepté seulement de son personnage. Clé « Prénom Nom » (Forever, 1.16.1) :
+-- comparée au nom de l'expéditeur par P.FullName ; sinon P.IsSender (clé de roster).
+local function FromItsCharacter(sender, key)
+	if not key then
+		return false
+	end
+	if not key:find("-", 1, true) and key:find(" ", 1, true) and P.FullName then
+		return P.FullName(sender) == P.FullName(key)
+	end
+	return P.IsSender and P.IsSender(sender, key) or false
+end
+
 local function Refresh()
 	if ns.Refresh then
 		ns.Refresh()
@@ -195,7 +259,7 @@ end
 
 -- Note un événement du personnage joué et l'envoie aux clients connectés.
 local function Record(kind, ...)
-	local parts = { GetServerTime(), P.GetCharKey(), kind }
+	local parts = { GetServerTime(), ns.CharKey(), kind }
 	for i = 1, select("#", ...) do
 		parts[#parts + 1] = Clean((select(i, ...)))
 	end
@@ -276,7 +340,7 @@ local function OnMessage(rest, sender)
 	end
 	-- Événement : seulement celui du personnage qui l'envoie.
 	local _, key = Parse(payload)
-	if not key or not (P.IsSender and P.IsSender(sender, key)) then
+	if not FromItsCharacter(sender, key) then
 		return
 	end
 	if kind == "E" then
@@ -320,8 +384,8 @@ local function CheckItemLevel()
 	if not level or level <= 0 then
 		return
 	end
-	local key = P.GetCharKey()
-	local previous = store.ilvl[key]
+	local key = ns.CharKey()
+	local previous = store.ilvl[key] or store.ilvl[P.GetCharKey()]
 	if previous and level > previous then
 		Record("ilvl", level, previous)
 	end
@@ -410,14 +474,14 @@ end
 -- Après un /reload dans l'instance : début et dernière fin retrouvés dans le journal (dernière
 -- entrée du personnage dans cette instance, aujourd'hui ou la veille).
 local function RestoreVisit(current)
-	local now, key = GetServerTime(), P.GetCharKey()
+	local now = GetServerTime()
 	local start, last
 	for _, day in ipairs({ DayOf(now - 86400), DayOf(now) }) do
 		for _, event in ipairs(store.days[day] or {}) do
 			local time, eventKey, kind, fields = Parse(event)
-			if eventKey == key and kind == "enter" and fields[4] == current.name then
+			if IsMine(eventKey) and kind == "enter" and fields[4] == current.name then
 				start, last = time, nil
-			elseif eventKey == key and start and COMPLETION_KINDS[kind] then
+			elseif IsMine(eventKey) and start and COMPLETION_KINDS[kind] then
 				last = time
 			end
 		end
@@ -574,13 +638,13 @@ end
 -- Connexion : pas notée si le personnage s'est déconnecté il y a moins de SHORT_DELAY (sa
 -- déconnexion est alors retirée : le journal le montre connecté sans interruption).
 local function OnLogin()
-	local now, key = GetServerTime(), P.GetCharKey()
+	local now = GetServerTime()
 	local last
 	for _, day in ipairs({ DayOf(now), DayOf(now - SHORT_DELAY) }) do
 		local list = store.days[day] or {}
 		for i = #list, 1, -1 do
 			local time, eventKey = Parse(list[i])
-			if eventKey == key and (not last or time > last.time) then
+			if IsMine(eventKey) and (not last or time > last.time) then
 				last = { time = time, event = list[i] }
 				break
 			end

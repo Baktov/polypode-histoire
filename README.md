@@ -202,6 +202,7 @@ other language).*
 
 ## Version
 
+`1.16.1` : WoW Forever : le journal note chaque personnage sous « Prénom Nom », et non plus sous « Prénom-Royaume » (le royaume y est celui de la couche du serveur et change d'une session à l'autre : un même personnage aurait eu plusieurs entrées) ; les événements déjà notés sous les anciennes formes sont réunis au sien (liste, séances, frise). Retail inchangé.
 `1.16.0` : liste du journal présentée comme une chronique (site Histoire v2) : fil vertical, grand numéro doré de chaque jour, temps joué du jour, icône de chaque événement, connexions discrètes, titres d'année et de mois soulignés ; repli inchangé ; depuis la frise, le jour cliqué est amené en haut de la liste. Filtres en pastilles (icône et nom de la catégorie, dorées quand cochées) à la place des cases à libellés abrégés.
 `1.15.0` : frise : présence lisible à toutes les échelles : cases de chaleur par jour (Mois) ou par semaine (Tous) à la place des barres trop fines, fond de chaleur et total du jour en Semaine, ligne « Tous » cumulant les personnages, week-ends teintés (même représentation que le site Histoire v2).
 `1.14.1` : redimensionnement par la poignée du coin corrigé : la fenêtre ne s'agrandit plus d'un coup hors de l'écran (coin haut-gauche fixe, taille bornée à l'écran).

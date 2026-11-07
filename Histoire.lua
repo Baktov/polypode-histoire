@@ -170,8 +170,10 @@ end
 
 -- Nom court d'un personnage, à la couleur de sa classe.
 local function CharName(key)
-	local entry = P.db and P.db.roster and P.db.roster[key]
-	local name = P.GetDisplayName and P.GetDisplayName(key) or key
+	-- Clé « Prénom-Royaume » ou « Prénom Nom » (Forever, 1.16.1) : entrée du roster par ns.RosterEntry.
+	local entry = ns.RosterEntry and ns.RosterEntry(key) or (P.db and P.db.roster and P.db.roster[key])
+	local name = entry and entry.name and entry.surname and entry.surname ~= "" and P.JoinSurname
+		and P.JoinSurname(entry.name, entry.surname) or (P.GetDisplayName and P.GetDisplayName(key) or key)
 	local color = entry and entry.class and RAID_CLASS_COLORS and RAID_CLASS_COLORS[entry.class]
 	return color and color:WrapTextInColorCode(name) or name
 end
@@ -244,6 +246,7 @@ local function SessionDurations(days)
 	for _, day in ipairs(sorted) do
 		for _, event in ipairs(days[day]) do
 			local time, key, kind = ns.Parse(event)
+			key = ns.Identity and ns.Identity(key) or key -- Forever : une identité, quelles que soient ses clés
 			if kind == "in" then
 				lastIn[key] = time
 			elseif kind == "out" then
@@ -384,6 +387,7 @@ local function DayLines(list, sessions)
 	local lines, open = {}, {}
 	for _, event in ipairs(list) do
 		local time, key, kind, fields = ns.Parse(event)
+		key = ns.Identity and ns.Identity(key) or key -- Forever : lignes réunies par « Prénom Nom »
 		local durationField = DURATION_FIELD[kind]
 		local mergeKey = table.concat(fields, "~", 3, durationField and math.min(#fields, durationField - 1) or #fields)
 		local duration = sessions[event] or (durationField and tonumber(fields[durationField]))

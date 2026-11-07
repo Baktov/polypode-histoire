@@ -170,6 +170,7 @@ local function Intervals(days)
 	for _, day in ipairs(days) do
 		for _, event in ipairs(store[day]) do
 			local time, key, kind = ns.Parse(event)
+			key = ns.Identity and ns.Identity(key) or key -- Forever : une piste par « Prénom Nom »
 			if time and key then
 				if kind == "in" then
 					if lastIn[key] then
@@ -941,7 +942,7 @@ local function Render()
 		played:SetText("|cff999999" .. H.DurationText(row.total) .. "|r")
 		local r, g, b = 1, 0.82, 0.2 -- doré : ligne « Tous », ou classe inconnue
 		if not row.sum then
-			local entry = P.db and P.db.roster and P.db.roster[row.key]
+			local entry = ns.RosterEntry and ns.RosterEntry(row.key) or (P.db and P.db.roster and P.db.roster[row.key])
 			local color = entry and entry.class and RAID_CLASS_COLORS and RAID_CLASS_COLORS[entry.class]
 			if color then
 				r, g, b = color.r, color.g, color.b
