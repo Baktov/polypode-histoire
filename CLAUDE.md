@@ -31,6 +31,8 @@ chaque événement, le renvoi de la session aux clients qui arrivent, et la purg
 
 `P.EnableTitleDoubleClick(fenêtre, remise, hauteur)` (si présente, Polypode 2.12 : double-clic sur la barre de titre, taille par défaut). Poignée de redimensionnement (Histoire.lua, `Build`) : au `OnMouseDown`, ancre `TOPLEFT` (coin haut-gauche fixe) et `SetResizeBounds` maximum = place jusqu'aux bords droit et bas de l'écran, puis `StartSizing("BOTTOMRIGHT", true)` ; taille enregistrée ramenée à celle de l'écran à la construction (fenêtre centrée et `SetClampedToScreen` : sans cela, elle s'agrandissait d'un coup hors de l'écran).
 
+Noms de famille WoW Forever (1.16.1, si présentes, Polypode 2.15) : `P.HasSurnames`, `P.UnitNameParts`, `P.JoinSurname`, `P.FullName`.
+
 Langues (si présentes) : `P.NewLocale`, `P.AddTranslations` (Polypode 2.8), `P.OnLanguageApplied` (2.9).
 
 `P.AddTitleButton`, `P.RegisterSlashCommand`, `P.RegisterMessageHandler`, `P.RegisterPeerCallback`,
