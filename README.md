@@ -56,7 +56,8 @@ afficher ou non ces jours de patchs et d'extensions (dorée par défaut).
 
 **Filtres** (pastilles en bas à gauche de la fenêtre, icône et nom de la catégorie, description au
 survol) : **Connexions**, **Hauts faits**, **Gouffres**, **Donjons** (avec les clés M+), **Raids**
-(entrées comprises), **Collections** (jouets, montures, mascottes), **Renom et réputation** et
+(entrées comprises), **Collections** (jouets, montures, mascottes), **Métiers** (nouvelles recettes
+apprises, regroupées par métier : « Zarine apprend 12 recettes (Couture) : « … », « … »… »), **Renom et réputation** et
 **Social** (amis, guildes, communautés). Un clic coche ou décoche (pastille dorée ; les autres
 s'estompent). Aucune cochée (par défaut) : tout le journal ; sinon, seuls les événements des
 catégories cochées, les jours sans événement retenu étant masqués. Le choix est gardé. Fenêtre
@@ -202,6 +203,7 @@ other language).*
 
 ## Version
 
+`1.17.0` : **nouvelles recettes apprises** (filtre « Métiers ») : celles apprises d'un coup (maître de métier) sont regroupées par métier en un seul événement, avec les noms des trois premières ; aussi sur le site Histoire.
 `1.16.1` : WoW Forever : le journal note chaque personnage sous « Prénom Nom », et non plus sous « Prénom-Royaume » (le royaume y est celui de la couche du serveur et change d'une session à l'autre : un même personnage aurait eu plusieurs entrées) ; les événements déjà notés sous les anciennes formes sont réunis au sien (liste, séances, frise). Retail inchangé.
 `1.16.0` : liste du journal présentée comme une chronique (site Histoire v2) : fil vertical, grand numéro doré de chaque jour, temps joué du jour, icône de chaque événement, connexions discrètes, titres d'année et de mois soulignés ; repli inchangé ; depuis la frise, le jour cliqué est amené en haut de la liste. Filtres en pastilles (icône et nom de la catégorie, dorées quand cochées) à la place des cases à libellés abrégés.
 `1.15.0` : frise : présence lisible à toutes les échelles : cases de chaleur par jour (Mois) ou par semaine (Tous) à la place des barres trop fines, fond de chaleur et total du jour en Semaine, ligne « Tous » cumulant les personnages, week-ends teintés (même représentation que le site Histoire v2).

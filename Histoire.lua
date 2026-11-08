@@ -31,6 +31,7 @@ local FILTERS = {
 	{ key = "dungeon", label = L["Donjons"], tip = L["Entrées dans un donjon, donjons terminés et clés mythiques+."] },
 	{ key = "raid", label = L["Raids"], tip = L["Entrées dans un raid et boss de raid vaincus."] },
 	{ key = "coll", label = L["Collections"], tip = L["Jouets, montures et mascottes obtenus."] },
+	{ key = "craft", label = L["Métiers"], tip = L["Nouvelles recettes apprises."] },
 	{ key = "rep", label = L["Renom et réputation"], tip = L["Paliers de renom et rangs de réputation "
 		.. "atteints (amitié comprise)."] },
 	{ key = "social", label = L["Social"], tip = L["Amis (du personnage ou Battle.net) ajoutés ou "
@@ -38,7 +39,7 @@ local FILTERS = {
 }
 local CATEGORY_OF_KIND = { ["in"] = "conn", out = "conn", ach = "ach", delve = "delve", dng = "dungeon",
 	mplus = "dungeon", boss = "raid", toy = "coll", mount = "coll", pet = "coll", renown = "rep", rep = "rep",
-	friend = "social", guild = "social", club = "social" }
+	rcp = "craft", friend = "social", guild = "social", club = "social" }
 local CATEGORY_OF_ENTRY = { delve = "delve", party = "dungeon", raid = "raid" }
 -- Icônes du jeu (Interface\Icons) par type d'événement (liste et frise, mêmes que le site Histoire)
 -- et par catégorie de filtre (pastilles du bas de la fenêtre). Absentes d'un client (WoW Forever) :
@@ -50,10 +51,11 @@ local ICONS = {
 	rep = "achievement_reputation_01", friend = "achievement_guildperk_everybodysfriend",
 	guild = "inv_shirt_guildtabard_01", club = "inv_misc_groupneedmore", grp = "inv_misc_groupneedmore",
 	lvl = "achievement_level_80", ilvl = "inv_sword_04", enter = "spell_arcane_portaldalaran",
+	rcp = "trade_blacksmithing",
 }
 local CATEGORY_ICONS = {
 	conn = "spell_holy_borrowedtime", ach = ICONS.ach, delve = ICONS.delve, dungeon = ICONS.dng, raid = ICONS.boss,
-	coll = ICONS.pet, rep = ICONS.renown, social = ICONS.friend,
+	coll = ICONS.pet, craft = ICONS.rcp, rep = ICONS.renown, social = ICONS.friend,
 }
 local PATCH_ICON = "inv_scroll_03"
 local FALLBACK_ICON = "Interface\\Icons\\INV_Misc_QuestionMark"
@@ -316,6 +318,21 @@ local function EventText(line)
 			return say(L["%s obtient la monture %s"], L["%s obtiennent la monture %s"], name)
 		end
 		return say(L["%s obtient la mascotte %s"], L["%s obtiennent la mascotte %s"], name)
+	elseif kind == "rcp" then
+		-- Recettes apprises : métier~nombre~ids~noms (3 noms au plus, séparés par « ; »).
+		local count = tonumber(f[5]) or 1
+		local names = {}
+		for name in tostring(f[7] or ""):gmatch("[^;]+") do
+			names[#names + 1] = Quoted(name)
+		end
+		local profession = f[4] ~= "" and f[4] or nil
+		if count <= 1 then
+			return say(L["%s apprend la recette %s%s"], L["%s apprennent la recette %s%s"],
+				names[1] or Quoted(L["n° %s"]:format(tostring(f[6]))), details(profession))
+		end
+		local list = table.concat(names, ", ") .. (count > #names and "…" or "")
+		return say(L["%s apprend %s recettes%s : %s"], L["%s apprennent %s recettes%s : %s"], count,
+			details(profession), list)
 	elseif kind == "friend" then
 		local added = f[5] == "+"
 		if f[6] == "b" then

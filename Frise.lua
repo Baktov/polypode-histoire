@@ -26,7 +26,7 @@ local SCALES = {
 local WEIGHT = {
 	boss = 3, mplus = 3, lvl = 3, mount = 3,
 	ach = 2, dng = 2, renown = 2, guild = 2,
-	delve = 1, toy = 1, pet = 1, rep = 1, ilvl = 1, friend = 1, club = 1, grp = 1,
+	delve = 1, toy = 1, pet = 1, rep = 1, ilvl = 1, friend = 1, club = 1, grp = 1, rcp = 1,
 	enter = 0,
 }
 local MIN_WEIGHT = { jour = 0, semaine = 1, mois = 2, tous = 3 }
@@ -36,6 +36,7 @@ local KIND_LABELS = {
 	guild = L["guilde rejointe ou quittée"], delve = L["gouffre (ou section) terminé"], toy = L["jouet"],
 	pet = L["mascotte"], rep = L["rang de réputation"], ilvl = L["niveau d'objet"], friend = L["ami ajouté ou retiré"],
 	club = L["communauté rejointe ou quittée"], grp = L["équipe groupée"], enter = L["entrée dans une instance"],
+	rcp = L["recette apprise"],
 }
 -- Icônes du jeu par type et icône des patchs : celles de Histoire.lua (liste et frise).
 local ICONS = H.ICONS
@@ -241,6 +242,12 @@ local function ShortText(line)
 		return f[5] or L["Réputation"]
 	elseif kind == "toy" or kind == "mount" or kind == "pet" then
 		return (f[5] and f[5] ~= "") and f[5] or "?"
+	elseif kind == "rcp" then
+		local count = tonumber(f[5]) or 1
+		if count > 1 then
+			return L["%s recettes"]:format(count)
+		end
+		return tostring(f[7] or ""):match("^[^;]+") or L["Recette"]
 	elseif kind == "friend" or kind == "guild" or kind == "club" then
 		return (f[5] == "+" and "+ " or "- ") .. (f[4] or "?")
 	elseif kind == "grp" then

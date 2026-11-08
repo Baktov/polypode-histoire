@@ -27,6 +27,9 @@ local L = ns.L
 --   toy  id~nom       jouet obtenu (id d'objet)
 --   mount id~nom      monture obtenue (mountID)
 --   pet  id~nom       mascotte obtenue (speciesID)
+--   rcp  métier~nombre~ids~noms  recettes apprises (1.17.0) : regroupées par métier pendant
+--                     RECIPE_BATCH secondes ; ids (10 au plus) séparés par « , », noms (3 au plus)
+--                     par « ; »
 --   renown id~niveau~faction  palier de renom atteint (faction majeure)
 --   rep  id~rang~faction~niveau  rang de réputation atteint (rang = texte du jeu : « Révéré », rang
 --                     d'amitié… ; niveau = numéro du rang), noté seulement en montant
@@ -798,6 +801,86 @@ local function OnToyAdded(itemID)
 	Record("toy", itemID, name or "")
 end
 
+-- Recettes apprises (NEW_RECIPE_LEARNED, 1.17.0) : regroupées par métier, notées RECIPE_BATCH s
+-- après la dernière (un maître de métier en apprend souvent plusieurs d'un coup). Rang supérieur
+-- d'une recette déjà connue (recipeLevel > 1) et premières secondes après la connexion ignorés.
+local RECIPE_BATCH = 3
+local RECIPE_LOGIN_QUIET = 10
+local RECIPE_MAX_IDS, RECIPE_MAX_NAMES = 10, 3
+local pendingRecipes = {} -- [métier] = { ids = {}, names = {} }
+local recipeTimer
+local recipeReadyAt -- heure serveur à partir de laquelle les recettes sont notées (entrée dans le monde + RECIPE_LOGIN_QUIET)
+
+local function RecipeProfession(recipeID)
+	local ui = C_TradeSkillUI
+	if ui and ui.GetProfessionInfoByRecipeID then
+		local ok, info = pcall(ui.GetProfessionInfoByRecipeID, recipeID)
+		if ok and info then
+			local name = info.parentProfessionName ~= "" and info.parentProfessionName or info.professionName
+			if name and name ~= "" and not Secret(name) then
+				return name
+			end
+		end
+	end
+	if ui and ui.GetTradeSkillLineForRecipe then
+		local ok, _, name = pcall(ui.GetTradeSkillLineForRecipe, recipeID)
+		if ok and name and name ~= "" and not Secret(name) then
+			return name
+		end
+	end
+	return ""
+end
+
+local function RecipeName(recipeID)
+	local ui = C_TradeSkillUI
+	if ui and ui.GetRecipeInfo then
+		local ok, info = pcall(ui.GetRecipeInfo, recipeID)
+		if ok and info and info.name and not Secret(info.name) then
+			return info.name
+		end
+	end
+	local name = C_Spell and C_Spell.GetSpellName and C_Spell.GetSpellName(recipeID)
+	return (name and not Secret(name)) and name or nil
+end
+
+local function FlushRecipes()
+	recipeTimer = nil
+	for profession, batch in pairs(pendingRecipes) do
+		local ids, names = {}, {}
+		for i = 1, math.min(#batch.ids, RECIPE_MAX_IDS) do
+			ids[#ids + 1] = batch.ids[i]
+		end
+		for i = 1, math.min(#batch.names, RECIPE_MAX_NAMES) do
+			names[#names + 1] = (batch.names[i]:gsub(";", ","))
+		end
+		Record("rcp", profession, #batch.ids, table.concat(ids, ","), table.concat(names, ";"))
+	end
+	wipe(pendingRecipes)
+end
+
+local function OnRecipeLearned(recipeID, recipeLevel)
+	if Secret(recipeID) or not recipeID or (recipeLevel and not Secret(recipeLevel) and recipeLevel > 1) then
+		return
+	end
+	if not recipeReadyAt or GetServerTime() < recipeReadyAt then
+		return
+	end
+	local profession = RecipeProfession(recipeID)
+	local batch = pendingRecipes[profession] or { ids = {}, names = {} }
+	pendingRecipes[profession] = batch
+	for _, known in ipairs(batch.ids) do
+		if known == recipeID then
+			return
+		end
+	end
+	batch.ids[#batch.ids + 1] = recipeID
+	batch.names[#batch.names + 1] = RecipeName(recipeID) or tostring(recipeID)
+	if recipeTimer then
+		recipeTimer:Cancel()
+	end
+	recipeTimer = C_Timer.NewTimer(RECIPE_BATCH, FlushRecipes)
+end
+
 local function OnMountAdded(mountID)
 	local name = C_MountJournal and C_MountJournal.GetMountInfoByID and C_MountJournal.GetMountInfoByID(mountID)
 	Record("mount", mountID, name or "")
@@ -1046,7 +1129,7 @@ events:RegisterEvent("PLAYER_LOGOUT")
 for _, event in ipairs({ "PLAYER_LEVEL_UP", "ACHIEVEMENT_EARNED", "PLAYER_EQUIPMENT_CHANGED",
 	"PLAYER_AVG_ITEM_LEVEL_UPDATE", "GROUP_ROSTER_UPDATE", "ENCOUNTER_END", "SCENARIO_COMPLETED",
 	"CHALLENGE_MODE_COMPLETED", "SCENARIO_UPDATE", "SCENARIO_CRITERIA_UPDATE", "NEW_TOY_ADDED", "NEW_MOUNT_ADDED",
-	"NEW_PET_ADDED", "MAJOR_FACTION_RENOWN_LEVEL_CHANGED", "FACTION_STANDING_CHANGED", "FRIENDLIST_UPDATE",
+	"NEW_PET_ADDED", "NEW_RECIPE_LEARNED", "MAJOR_FACTION_RENOWN_LEVEL_CHANGED", "FACTION_STANDING_CHANGED", "FRIENDLIST_UPDATE",
 	"BN_FRIEND_LIST_SIZE_CHANGED", "PLAYER_GUILD_UPDATE", "CLUB_ADDED", "CLUB_REMOVED" }) do
 	if not C_EventUtils or not C_EventUtils.IsEventValid or C_EventUtils.IsEventValid(event) then
 		events:RegisterEvent(event)
@@ -1078,6 +1161,7 @@ events:SetScript("OnEvent", function(_, event, ...)
 	end
 	if event == "PLAYER_ENTERING_WORLD" then
 		local isLogin, isReload = ...
+		recipeReadyAt = GetServerTime() + RECIPE_LOGIN_QUIET
 		if isLogin then
 			OnLogin()
 			C_Timer.After(5, SeedReputations)
@@ -1131,6 +1215,8 @@ events:SetScript("OnEvent", function(_, event, ...)
 		OnMountAdded(...)
 	elseif event == "NEW_PET_ADDED" then
 		OnPetAdded(...)
+	elseif event == "NEW_RECIPE_LEARNED" then
+		OnRecipeLearned(...)
 	elseif event == "MAJOR_FACTION_RENOWN_LEVEL_CHANGED" then
 		OnRenownChanged(...)
 	elseif event == "FACTION_STANDING_CHANGED" then

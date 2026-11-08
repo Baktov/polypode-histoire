@@ -54,7 +54,8 @@ at the bottom right of the window: show these patch and expansion days or not (g
 
 **Filters** (chips at the bottom left of the window, category icon and name, description on hover):
 **Logins**, **Achievements**, **Delves**, **Dungeons** (with M+ keys), **Raids** (entries included),
-**Collections** (toys, mounts, pets), **Renown and reputation** and **Social** (friends, guilds,
+**Collections** (toys, mounts, pets), **Professions** (new recipes learned, grouped by
+profession), **Renown and reputation** and **Social** (friends, guilds,
 communities). A click checks or unchecks (gold chip; the others fade). None checked (default): the
 whole journal; otherwise, only the events of the checked categories, days without a kept event
 being hidden. The choice is kept. Narrow window: icons only, checked chips keeping their name.
