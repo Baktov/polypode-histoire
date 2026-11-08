@@ -1096,6 +1096,10 @@ local function CheckSocial()
 			end
 		end
 		char.guild = guild
+		-- Guilde actuelle de chaque personnage, aussi dans le fichier de compte (lu par le site
+		-- Histoire : PolypodeHistoireChar n'est jamais envoyé) ; "" = sans guilde.
+		store.guilds = store.guilds or {}
+		store.guilds[ns.CharKey()] = guild
 	end
 	local clubs = ReadClubs()
 	if Usable(clubs, char.clubs) then
@@ -1143,6 +1147,7 @@ events:SetScript("OnEvent", function(_, event, ...)
 			store.format = FORMAT
 			store.days = store.days or {}
 			store.ilvl = store.ilvl or {}
+			store.guilds = store.guilds or {}
 			store.deleted = store.deleted or {}
 			-- Traces de retrait trop anciennes (ou illisibles) oubliées.
 			local oldest = GetServerTime() - DELETED_KEEP

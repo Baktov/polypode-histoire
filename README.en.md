@@ -152,6 +152,9 @@ deleted = { -- journal only (1.11.0): removed events, kept 120 days
 	["1791746000~Mordsith-Elune~ach~1234"] = "D:1791750000", -- deleted by hand (right-click)
 	["1791745400~Darà-Elune~in"] = "R:1791745500", -- removed automatically (session too short)
 },
+guilds = { -- journal only (1.18.0): current guild of each character, "" = no guild
+	["Mordsith-Elune"] = "Les Polypodes",
+},
 ```
 
 Software keeping its own history must remove the events listed in `deleted`.
