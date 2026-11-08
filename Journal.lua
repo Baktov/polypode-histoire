@@ -1019,9 +1019,13 @@ local function ReadGuild()
 	if not IsInGuild() then
 		return ""
 	end
-	local name = GetGuildInfo("player")
+	-- 4e retour : royaume de la guilde, nil quand c'est celui du personnage.
+	local name, _, _, realm = GetGuildInfo("player")
 	if name and not Secret(name) then
-		return name
+		if not realm or Secret(realm) or realm == "" then
+			realm = GetRealmName()
+		end
+		return name, realm
 	end
 	return nil -- dans une guilde dont le nom n'est pas encore connu
 end
@@ -1085,7 +1089,7 @@ local function CheckSocial()
 		end
 		char.bnet = bnet
 	end
-	local guild = ReadGuild()
+	local guild, guildRealm = ReadGuild()
 	if guild then
 		if char.guild and char.guild ~= guild then
 			if char.guild ~= "" then
@@ -1097,9 +1101,9 @@ local function CheckSocial()
 		end
 		char.guild = guild
 		-- Guilde actuelle de chaque personnage, aussi dans le fichier de compte (lu par le site
-		-- Histoire : PolypodeHistoireChar n'est jamais envoyé) ; "" = sans guilde.
+		-- Histoire : PolypodeHistoireChar n'est jamais envoyé) : { name, realm }, "" = sans guilde.
 		store.guilds = store.guilds or {}
-		store.guilds[ns.CharKey()] = guild
+		store.guilds[ns.CharKey()] = guild ~= "" and { name = guild, realm = guildRealm } or ""
 	end
 	local clubs = ReadClubs()
 	if Usable(clubs, char.clubs) then

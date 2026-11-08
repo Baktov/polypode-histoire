@@ -161,7 +161,8 @@ deleted = { -- journal seulement (1.11.0) : événements retirés, gardés 120 j
 	["1791745400~Darà-Elune~in"] = "R:1791745500", -- retiré automatiquement (session trop courte)
 },
 guilds = { -- journal seulement (1.18.0) : guilde actuelle de chaque personnage, "" = sans guilde
-	["Mordsith-Elune"] = "Les Polypodes",
+	["Mordsith-Elune"] = { name = "Les Polypodes", realm = "Elune" },
+	["Darà-Elune"] = "",
 },
 ```
 
@@ -212,7 +213,7 @@ other language).*
 
 ## Version
 
-`1.18.0` : la **guilde actuelle** de chaque personnage est aussi gardée dans le journal (`guilds`), pour que le site Histoire l'affiche.
+`1.18.0` : la **guilde actuelle** de chaque personnage (nom et royaume) est aussi gardée dans le journal (`guilds`), pour que le site Histoire l'affiche et propose une vue par guilde.
 `1.17.1` : licence libre **GNU GPL version 3** (fichier `LICENSE`).
 `1.17.0` : **nouvelles recettes apprises** (filtre « Métiers ») : celles apprises d'un coup (maître de métier) sont regroupées par métier en un seul événement, avec les noms des trois premières ; aussi sur le site Histoire.
 `1.16.1` : WoW Forever : le journal note chaque personnage sous « Prénom Nom », et non plus sous « Prénom-Royaume » (le royaume y est celui de la couche du serveur et change d'une session à l'autre : un même personnage aurait eu plusieurs entrées) ; les événements déjà notés sous les anciennes formes sont réunis au sien (liste, séances, frise). Retail inchangé.

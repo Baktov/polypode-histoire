@@ -153,7 +153,8 @@ deleted = { -- journal only (1.11.0): removed events, kept 120 days
 	["1791745400~Darà-Elune~in"] = "R:1791745500", -- removed automatically (session too short)
 },
 guilds = { -- journal only (1.18.0): current guild of each character, "" = no guild
-	["Mordsith-Elune"] = "Les Polypodes",
+	["Mordsith-Elune"] = { name = "Les Polypodes", realm = "Elune" },
+	["Darà-Elune"] = "",
 },
 ```
 
