@@ -188,6 +188,12 @@ personnage = `nom-royaume`, jour = date locale. Types et champs :
 
 ---
 
+## Licence
+
+Polypode Histoire est un logiciel libre, sous licence **GNU GPL version 3** (fichier
+[`LICENSE`](LICENSE)) : vous pouvez le reprendre, le modifier et le redistribuer, à condition de
+garder cette licence et de citer l'auteur. Copyright (C) 2026 Baktov.
+
 ## Langues (Languages)
 
 Polypode Histoire s'affiche dans la langue choisie dans Polypode (option « Langue / Language », `/poly langue`),
@@ -203,6 +209,7 @@ other language).*
 
 ## Version
 
+`1.17.1` : licence libre **GNU GPL version 3** (fichier `LICENSE`).
 `1.17.0` : **nouvelles recettes apprises** (filtre « Métiers ») : celles apprises d'un coup (maître de métier) sont regroupées par métier en un seul événement, avec les noms des trois premières ; aussi sur le site Histoire.
 `1.16.1` : WoW Forever : le journal note chaque personnage sous « Prénom Nom », et non plus sous « Prénom-Royaume » (le royaume y est celui de la couche du serveur et change d'une session à l'autre : un même personnage aurait eu plusieurs entrées) ; les événements déjà notés sous les anciennes formes sont réunis au sien (liste, séances, frise). Retail inchangé.
 `1.16.0` : liste du journal présentée comme une chronique (site Histoire v2) : fil vertical, grand numéro doré de chaque jour, temps joué du jour, icône de chaque événement, connexions discrètes, titres d'année et de mois soulignés ; repli inchangé ; depuis la frise, le jour cliqué est amené en haut de la liste. Filtres en pastilles (icône et nom de la catégorie, dorées quand cochées) à la place des cases à libellés abrégés.
