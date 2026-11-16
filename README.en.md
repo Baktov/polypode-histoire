@@ -49,7 +49,8 @@ laid out as a chronicle (same look as the Histoire v2 website):
 
 **Patch release** days (European server date) are shown **in green** right of the date, with the
 patch name ("Wednesday, October 14  Patch 12.1.5 ..."), even with no event that day, in the months
-shown; an announced upcoming patch is always shown, marked "(upcoming)" (Retail only). **Exp** chip
+shown; an announced upcoming patch is always shown, marked "(upcoming)". Each game has its own dates:
+patches and expansions for Retail, the game launch (November 5, 2026) for WoW Forever. **Exp** chip
 at the bottom right of the window: show these patch and expansion days or not (gold by default).
 
 **Filters** (chips at the bottom left of the window, category icon and name, description on hover):
@@ -77,7 +78,7 @@ the journal on a horizontal axis:
   played most and the day total under the bars when the track is tall enough. **Month** and **All**:
   one square per day (Month) or per week (All), darker when you played more (hover: time played;
   click: that week). Weekends slightly tinted.
-- **Patch releases** (Retail, **Exp** box): green line and icon with a green border.
+- **Patch releases** (**Exp** box; WoW Forever: game launch): green line and icon with a green border.
 - **Importance** (**?** button): the longer the period, the fewer details shown. Weights: 3 raid
   boss, M+ key, level, mount; 2 achievement, dungeon, renown, guild; 1 delve, toy, pet, reputation,
   item level, friends, communities, team; 0 instance entry. Threshold: Day 0, Week 1, Month 2,

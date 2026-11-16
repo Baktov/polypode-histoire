@@ -76,12 +76,14 @@ local function SetEventIcon(texture, line)
 	end
 	SetIcon(texture, name)
 end
--- Sorties de patchs (Retail, date des serveurs européens : le mercredi), écrites en vert dans
+-- Sorties de patchs (date des serveurs européens : le mercredi pour Retail), écrites en vert dans
 -- l'en-tête du jour, pour les mois affichés et, à venir, toujours (case « Ext » en bas à droite de
 -- la fenêtre, PolypodeHistoireDB.showPatches). **À compléter à chaque patch**, dès sa date officielle
 -- (Mamytwink / Wowhead, nom officiel français s'il y en a un) ; 12.1.7 « Échos du Noyau-monde » :
--- pas encore daté au 16/10/2026.
-local PATCHES = {
+-- pas encore daté au 16/10/2026. Une table par jeu : Retail, puis WoW Forever (sortie mondiale le
+-- 4 novembre 2026 à 15 h PST, soit le 5 novembre à 0 h en Europe centrale).
+local IS_RETAIL = (select(4, GetBuildInfo()) or 0) >= 100000
+local PATCHES = IS_RETAIL and {
 	["2026-01-21"] = L["Patch 12.0.0 (pré-patch de Midnight)"],
 	["2026-02-11"] = L["Patch 12.0.1"],
 	["2026-03-03"] = L["Sortie de Midnight"],
@@ -90,10 +92,10 @@ local PATCHES = {
 	["2026-08-12"] = L["Patch 12.1.0 « La malédiction d'Ula'tek »"],
 	["2026-08-19"] = L["Saison 2 de Midnight"],
 	["2026-10-14"] = L["Patch 12.1.5 « La Promesse de demain »"],
+} or {
+	["2026-11-05"] = L["Sortie de WoW Forever"],
 }
 local PATCH_COLOR = "|cff40ff40"
--- Table propre à Retail (WoW Forever a ses propres versions).
-local IS_RETAIL = (select(4, GetBuildInfo()) or 0) >= 100000
 -- Mois en tête de ligne, mois dans une phrase (« lundi 21 octobre » : minuscule en français, pas en
 -- anglais ni en allemand), jours de la semaine.
 local MONTHS = { L["Janvier"], L["Février"], L["Mars"], L["Avril"], L["Mai"], L["Juin"], L["Juillet"], L["Août"],
@@ -454,7 +456,7 @@ local function BuildItems()
 	end
 	-- Jours de sortie d'un patch dans un mois affiché, ou à venir, même sans événement.
 	local today = ns.DayOf(GetServerTime())
-	local patches = IS_RETAIL and Settings().showPatches and PATCHES or {}
+	local patches = Settings().showPatches and PATCHES or {}
 	for day in pairs(patches) do
 		if (totals[day:sub(1, 7)] or day > today) and #(lists[day] or {}) == 0 then
 			lists[day] = {}
@@ -675,7 +677,7 @@ local function RefreshChips()
 		local on = settings.filters[chip.filter.key] == true
 		PaintChip(chip, on, any and not on)
 	end
-	PaintChip(frame.patchChip, settings.showPatches, not IS_RETAIL)
+	PaintChip(frame.patchChip, settings.showPatches, false)
 end
 
 -- Disposition selon la largeur de la fenêtre : tous les libellés, sinon ceux des seules pastilles
@@ -762,9 +764,6 @@ local function Build()
 		GameTooltip:AddLine(L["Extensions et patchs"])
 		GameTooltip:AddLine(L["Cochée : les jours de sortie des patchs et des extensions sont écrits en vert avec "
 			.. "leur nom (date des serveurs européens), dans les mois affichés, et ceux annoncés à venir."], 1, 1, 1, true)
-		if not IS_RETAIL then
-			GameTooltip:AddLine(L["Retail seulement."], 1, 0.25, 0.25, true)
-		end
 		ShowTooltip()
 	end)
 	patchChip.label:SetText(L["Ext"])

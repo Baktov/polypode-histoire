@@ -493,7 +493,7 @@ local function BuildModel(width)
 	end
 
 	local patches = {}
-	if H.IS_RETAIL and settings.showPatches then
+	if settings.showPatches then
 		for day, name in pairs(H.PATCHES) do
 			if day >= period.startKey and day < period.endKey then
 				patches[#patches + 1] = { day = day, name = name, x = x(DayStart(day)) }

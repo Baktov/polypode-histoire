@@ -51,7 +51,8 @@ plus ancien, présenté comme une chronique (même allure que le site Histoire v
 Les jours de **sortie d'un patch** (date des serveurs européens) sont signalés **en vert** à droite
 de la date, avec le nom du patch (« Mercredi 14 octobre  Patch 12.1.5 « La Promesse de demain » »),
 même sans événement ce jour-là, dans les mois affichés ; un patch annoncé à venir est toujours
-affiché, marqué « (à venir) » (Retail seulement). Pastille **Ext** en bas à droite de la fenêtre :
+affiché, marqué « (à venir) ». Chaque jeu a ses dates : patchs et extensions pour Retail, sortie du
+jeu (5 novembre 2026) pour WoW Forever. Pastille **Ext** en bas à droite de la fenêtre :
 afficher ou non ces jours de patchs et d'extensions (dorée par défaut).
 
 **Filtres** (pastilles en bas à gauche de la fenêtre, icône et nom de la catégorie, description au
@@ -82,7 +83,7 @@ journal sur un axe horizontal :
   les plus joués et total du jour sous les barres quand la piste est assez haute. **Mois** et **Tous** :
   une case par jour (Mois) ou par semaine (Tous), plus foncée quand on a plus joué (survol : temps joué ;
   clic : cette semaine). Week-ends légèrement teintés.
-- **Sorties de patchs** (Retail, case **Ext**) : trait vert et icône bordée de vert.
+- **Sorties de patchs** (case **Ext** ; WoW Forever : sortie du jeu) : trait vert et icône bordée de vert.
 - **Importance** (bouton **?**) : plus la période est longue, moins on montre de détails. Poids :
   3 boss de raid, clé M+, niveau, monture ; 2 haut fait, donjon, renom, guilde ; 1 gouffre, jouet,
   mascotte, réputation, niveau d'objet, amis, communautés, équipe ; 0 entrée d'instance. Seuil :
@@ -213,6 +214,7 @@ other language).*
 
 ## Version
 
+`1.19.0` : WoW Forever : la **sortie du jeu** (5 novembre 2026) est signalée comme un patch, en vert dans la liste et par un trait sur la frise ; la pastille **Ext** y est donc active.
 `1.18.0` : la **guilde actuelle** de chaque personnage (nom et royaume) est aussi gardée dans le journal (`guilds`), pour que le site Histoire l'affiche et propose une vue par guilde.
 `1.17.1` : licence libre **GNU GPL version 3** (fichier `LICENSE`).
 `1.17.0` : **nouvelles recettes apprises** (filtre « Métiers ») : celles apprises d'un coup (maître de métier) sont regroupées par métier en un seul événement, avec les noms des trois premières ; aussi sur le site Histoire.
