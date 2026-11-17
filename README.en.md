@@ -94,7 +94,7 @@ Within a day, events are in time order:
 | Team grouped in full (recorded by its leader) | 21:07 Team "Midnight" groups up (5 characters) |
 | Entering a delve, a dungeon or a raid | 21:15 Mordsith, Darà enter the delve "The Well" |
 | Delve completed (with the section for a delve in several parts) | 21:40 Mordsith, Darà complete the delve "The Well": "..." (tier 8, 25 min) |
-| Dungeon completed (last boss) | 22:10 ... complete the dungeon "..." (Heroic, 32 min) |
+| Dungeon completed (WoW Forever: every required boss killed, in any order; Retail: last boss of the Dungeon Journal, or all its bosses) | 22:10 ... complete the dungeon "..." (Heroic, 32 min) |
 | Mythic+ key completed (duration: timer) | 22:45 ... complete the key "..." +10 (in time, 28 min) |
 | Raid boss defeated | 23:20 ... defeat "..." (raid, difficulty, 12 min) |
 | Achievement (**click**: open the game's achievement window on it) | Mordsith earns the achievement "..." |

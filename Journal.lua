@@ -72,7 +72,7 @@ local count = 0 -- nombre d'événements
 local withdrawn = {} -- [événement] = "R" / "D", retirés pendant la session (renvoyés aux clients qui s'annoncent)
 local reloading -- /reload en cours : PLAYER_LOGOUT n'est pas une déconnexion
 local loginEvent, loginTime -- événement « in » de la session (nil si reconnexion rapide) et son heure
-local visit -- instance en cours : { id, name, start, last } (UpdateVisit) ; left / leftAt : celle qu'on vient de quitter
+local visit -- instance en cours : { id, name, start, last, kills } (UpdateVisit) ; left / leftAt : celle qu'on vient de quitter
 local left, leftAt
 local delveState -- gouffre en cours : { tier, section } relevés pendant le scénario (UpdateDelveState)
 local loggedOut -- déconnexion traitée par Logout / Quit (annulée par CancelLogout) : événement « out »
@@ -430,30 +430,89 @@ local function Secret(value)
 	return issecretvalue and issecretvalue(value)
 end
 
--- Donjon : le boss vaincu est-il le dernier du Journal des donjons ? (boss facultatifs ignorés)
-local function IsLastDungeonBoss(encounterID)
-	if not (EJ_GetInstanceForMap and EJ_GetEncounterInfoByIndex and C_Map and C_Map.GetBestMapForUnit) then
-		return false
+-- DONJONS : FIN ------------------------------------------------------------------------------------
+
+local IS_RETAIL = (select(4, GetBuildInfo()) or 0) >= 100000
+local foreverIndex -- [numéro de combat] = { key, bosses } (Donjons.lua, construit à la première demande)
+
+-- WoW Forever : donjon de la table Donjons.lua dont le boss fait partie, ou nil.
+local function ForeverDungeon(encounterID)
+	if IS_RETAIL or not ns.FOREVER_DUNGEONS then
+		return nil
 	end
-	local ok, last = pcall(function()
+	if not foreverIndex then
+		foreverIndex = {}
+		for key, bosses in pairs(ns.FOREVER_DUNGEONS) do
+			for _, ids in ipairs(bosses) do
+				for _, id in ipairs(ids) do
+					foreverIndex[id] = { key = key, bosses = bosses }
+				end
+			end
+		end
+	end
+	return foreverIndex[encounterID]
+end
+
+-- Numéros de combat des boss du Journal des donjons pour l'instance en cours, dans l'ordre du journal,
+-- ou nil.
+local function JournalBosses()
+	if not (EJ_GetInstanceForMap and EJ_GetEncounterInfoByIndex and C_Map and C_Map.GetBestMapForUnit) then
+		return nil
+	end
+	local ok, list = pcall(function()
 		local mapID = C_Map.GetBestMapForUnit("player")
 		local journalID = mapID and EJ_GetInstanceForMap(mapID)
 		if not journalID or journalID == 0 then
 			return nil
 		end
-		local lastID
+		local ids = {}
 		local index = 1
 		while true do
 			local name, _, _, _, _, _, dungeonEncounterID = EJ_GetEncounterInfoByIndex(index, journalID)
 			if not name then
 				break
 			end
-			lastID = dungeonEncounterID
+			ids[#ids + 1] = { dungeonEncounterID }
 			index = index + 1
 		end
-		return lastID
+		return ids
 	end)
-	return ok and last ~= nil and last == encounterID
+	return ok and list and #list > 0 and list or nil
+end
+
+-- Chaque boss (liste de ses numéros de combat) a-t-il été tué ?
+local function AllKilled(bosses, kills)
+	for _, ids in ipairs(bosses) do
+		local killed = false
+		for _, id in ipairs(ids) do
+			if kills[id] then
+				killed = true
+				break
+			end
+		end
+		if not killed then
+			return false
+		end
+	end
+	return true
+end
+
+-- Donjon terminé par la mort de ce boss ? Renvoie une clé (une fin par clé et par visite) ou nil.
+-- WoW Forever (Donjons.lua) : tous les boss obligatoires tués pendant la visite, dans n'importe quel
+-- ordre. Sinon, Journal des donjons : dernier boss du journal (arrivée en cours de donjon) ou tous
+-- ses boss tués.
+local function DungeonCompleted(encounterID, kills)
+	local forever = ForeverDungeon(encounterID)
+	if forever then
+		return AllKilled(forever.bosses, kills) and forever.key or nil
+	end
+	local bosses = JournalBosses()
+	if not bosses then
+		return nil
+	end
+	if bosses[#bosses][1] == encounterID or AllKilled(bosses, kills) then
+		return "journal"
+	end
 end
 
 -- INSTANCES : ENTRÉE ET DURÉE -------------------------------------------------------------------
@@ -507,8 +566,14 @@ local function UpdateVisit(isReload)
 	if visit and visit.id == current.id then
 		return
 	end
+	PolypodeHistoireChar = PolypodeHistoireChar or {}
+	local saved = PolypodeHistoireChar.dungeonKills
 	if isReload then
 		visit = RestoreVisit(current)
+		-- boss tués avant le /reload, gardés dans le fichier du personnage
+		if saved and saved.id == current.id then
+			visit.kills = saved
+		end
 	elseif left and left.id == current.id and GetServerTime() - leftAt < REENTRY_DELAY then
 		visit = left
 	else
@@ -516,6 +581,10 @@ local function UpdateVisit(isReload)
 		current.start = GetServerTime()
 		visit = current
 	end
+	if not visit.kills then
+		visit.kills = { id = current.id, kills = {}, done = {} }
+	end
+	PolypodeHistoireChar.dungeonKills = visit.kills
 	left = nil
 end
 
@@ -543,7 +612,15 @@ local function OnEncounterEnd(encounterID, encounterName, difficultyID, _, succe
 	elseif instanceType == "party" then
 		local isChallenge = C_ChallengeMode and C_ChallengeMode.IsChallengeModeActive
 			and C_ChallengeMode.IsChallengeModeActive()
-		if not isChallenge and IsLastDungeonBoss(encounterID) then
+		if isChallenge then
+			return
+		end
+		-- boss tués pendant la visite (sans visite connue : ce seul boss)
+		local record = visit and visit.kills or { kills = {}, done = {} }
+		record.kills[encounterID] = true
+		local key = DungeonCompleted(encounterID, record.kills)
+		if key and not record.done[key] then
+			record.done[key] = true
 			Record("dng", instanceName, difficultyID, Elapsed())
 		end
 	end
