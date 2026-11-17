@@ -102,6 +102,7 @@ Dans un jour, les événements sont dans l'ordre de l'heure :
 | Entrée dans un gouffre, un donjon ou un raid | 21:15 Mordsith, Darà entrent dans le gouffre « Le Puits » |
 | Gouffre terminé (avec la section pour un gouffre en plusieurs parties) | 21:40 Mordsith, Darà terminent le gouffre « Le Puits » : « … » (palier 8, 25 min) |
 | Donjon terminé (WoW Forever : tous les boss obligatoires tués, dans n'importe quel ordre ; Retail : dernier boss du Journal des donjons ou tous ses boss) | 22:10 … terminent le donjon « … » (Héroïque, 32 min) |
+| Donjon fait en partie : au moins un boss tué, sorti sans revenir dans les 15 minutes (ou déconnexion, entrée dans une autre instance, donjon réinitialisé) ; noté à l'heure de la sortie | 21:40 … fait une partie du donjon « … » (2 boss sur 4, 45 min) |
 | Clé mythique+ terminée (durée : temps du chrono) | 22:45 … terminent la clé « … » +10 (dans les temps, 28 min) |
 | Boss de raid vaincu | 23:20 … vainquent « … » (raid, difficulté, 12 min) |
 | Haut fait (**clic** : ouvrir la fenêtre des hauts faits du jeu sur lui) | Mordsith obtient le haut fait « … » |
@@ -182,6 +183,7 @@ personnage = `nom-royaume`, jour = date locale. Types et champs :
 | `delve` | nom du gouffre, palier (« 0 » dans les anciens événements : inconnu, non affiché), section, durée (secondes) |
 | `enter` | nom de l'instance, identifiant de difficulté, genre (`delve` / `party` / `raid`) |
 | `dng` | nom du donjon, identifiant de difficulté, durée |
+| `dngp` | nom du donjon, identifiant de difficulté, boss tués, nombre de boss (vide si inconnu), durée (de l'entrée à la sortie) |
 | `mplus` | nom du donjon, niveau de la clé, dans les temps (1 / 0), améliorations de la clé, durée (chrono) |
 | `boss` | nom du boss, identifiant de difficulté, nom du raid, durée |
 | `toy` / `mount` / `pet` | identifiant (objet, monture, espèce de mascotte), nom |
@@ -214,6 +216,7 @@ other language).*
 
 ## Version
 
+`1.20.0` : **donjon fait en partie** : un donjon quitté avec au moins un boss tué, sans y revenir dans les 15 minutes, est noté avec le nombre de boss tués (« 2 boss sur 4 »), à l'heure de la sortie ; aussi à la déconnexion, en entrant dans une autre instance ou quand le donjon est réinitialisé.
 `1.19.1` : WoW Forever : un **donjon** est noté terminé quand tous ses boss obligatoires ont été tués, dans n'importe quel ordre (avant : seulement si le dernier boss du Journal des donjons mourait en dernier ; le Gouffre de Ragefeu fini sur Oggleflint n'était pas noté). Les boss tués sont gardés après un `/reload`.
 `1.19.0` : WoW Forever : la **sortie du jeu** (5 novembre 2026) est signalée comme un patch, en vert dans la liste et par un trait sur la frise ; la pastille **Ext** y est donc active.
 `1.18.0` : la **guilde actuelle** de chaque personnage (nom et royaume) est aussi gardée dans le journal (`guilds`), pour que le site Histoire l'affiche et propose une vue par guilde.

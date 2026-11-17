@@ -260,9 +260,9 @@ local function Send(kind, payload, target)
 	end
 end
 
--- Note un événement du personnage joué et l'envoie aux clients connectés.
-local function Record(kind, ...)
-	local parts = { GetServerTime(), ns.CharKey(), kind }
+-- Note un événement du personnage joué, à l'heure donnée, et l'envoie aux clients connectés.
+local function RecordAt(time, kind, ...)
+	local parts = { time, ns.CharKey(), kind }
 	for i = 1, select("#", ...) do
 		parts[#parts + 1] = Clean((select(i, ...)))
 	end
@@ -273,6 +273,11 @@ local function Record(kind, ...)
 		Refresh()
 	end
 	return event
+end
+
+-- Note un événement du personnage joué, maintenant.
+local function Record(kind, ...)
+	return RecordAt(GetServerTime(), kind, ...)
 end
 
 -- Garde la trace d'un événement retiré (kind "D" ou "R" ; une suppression à la main l'emporte).
@@ -480,39 +485,42 @@ local function JournalBosses()
 	return ok and list and #list > 0 and list or nil
 end
 
--- Chaque boss (liste de ses numéros de combat) a-t-il été tué ?
-local function AllKilled(bosses, kills)
+-- Nombre de boss (chacun = liste de ses numéros de combat) tués.
+local function KilledCount(bosses, kills)
+	local killed = 0
 	for _, ids in ipairs(bosses) do
-		local killed = false
 		for _, id in ipairs(ids) do
 			if kills[id] then
-				killed = true
+				killed = killed + 1
 				break
 			end
 		end
-		if not killed then
-			return false
-		end
 	end
-	return true
+	return killed
 end
 
--- Donjon terminé par la mort de ce boss ? Renvoie une clé (une fin par clé et par visite) ou nil.
+-- Avancée du donjon après la mort de ce boss : clé si le donjon est terminé (une fin par clé et par
+-- visite) ou nil, boss tués, nombre de boss (nil si inconnu). record = visit.kills.
 -- WoW Forever (Donjons.lua) : tous les boss obligatoires tués pendant la visite, dans n'importe quel
--- ordre. Sinon, Journal des donjons : dernier boss du journal (arrivée en cours de donjon) ou tous
+-- ordre ; le donjon reconnu reste celui de la visite (record.dungeon), même pour un boss rare hors
+-- table. Sinon, Journal des donjons : dernier boss du journal (arrivée en cours de donjon) ou tous
 -- ses boss tués.
-local function DungeonCompleted(encounterID, kills)
+local function DungeonProgress(encounterID, record)
 	local forever = ForeverDungeon(encounterID)
-	if forever then
-		return AllKilled(forever.bosses, kills) and forever.key or nil
+	local key = forever and forever.key or record.dungeon
+	if key and ns.FOREVER_DUNGEONS[key] then
+		record.dungeon = key
+		local bosses = ns.FOREVER_DUNGEONS[key]
+		local killed = KilledCount(bosses, record.kills)
+		return killed == #bosses and key or nil, killed, #bosses
 	end
 	local bosses = JournalBosses()
 	if not bosses then
 		return nil
 	end
-	if bosses[#bosses][1] == encounterID or AllKilled(bosses, kills) then
-		return "journal"
-	end
+	local killed = KilledCount(bosses, record.kills)
+	local done = (bosses[#bosses][1] == encounterID or killed == #bosses) and "journal" or nil
+	return done, killed, #bosses
 end
 
 -- INSTANCES : ENTRÉE ET DURÉE -------------------------------------------------------------------
@@ -552,13 +560,42 @@ local function RestoreVisit(current)
 	return current
 end
 
+-- Donjon fait en partie : visite d'un donjon quittée (à l'heure donnée) avec au moins un boss tué et
+-- sans fin notée → événement « dngp » nom~difficulté~boss tués~nombre de boss~durée, une fois par
+-- visite (done.partial). Renvoie l'événement noté ou nil.
+local function NotePartial(v, time)
+	local record = v and v.kind == "party" and v.kills
+	if not record or (record.killed or 0) == 0 or next(record.done) then
+		return nil
+	end
+	record.done.partial = true
+	return RecordAt(time, "dngp", v.name, v.difficulty, record.killed, record.total or "",
+		v.start and (time - (v.last or v.start)) or "")
+end
+
+-- Instance quittée et pas reprise : donjon fait en partie noté à l'heure de la sortie.
+local function FlushLeft()
+	if left then
+		NotePartial(left, leftAt)
+	end
+	left = nil
+end
+
 -- À chaque PLAYER_ENTERING_WORLD : entrée notée en arrivant dans une nouvelle instance (pas au
--- /reload, pas en y revenant moins de REENTRY_DELAY après l'avoir quittée).
+-- /reload, pas en y revenant moins de REENTRY_DELAY après l'avoir quittée). Instance quittée :
+-- gardée dans left, puis donjon fait en partie noté si on n'y est pas revenu après REENTRY_DELAY
+-- (ou dès l'entrée dans une autre instance, la déconnexion, la réinitialisation du donjon).
 local function UpdateVisit(isReload)
 	local current = CurrentInstance()
 	if not current then
 		if visit then
-			left, leftAt = visit, GetServerTime()
+			local gone = visit
+			left, leftAt = gone, GetServerTime()
+			C_Timer.After(REENTRY_DELAY + 1, function()
+				if left == gone then
+					FlushLeft()
+				end
+			end)
 		end
 		visit = nil
 		return
@@ -577,6 +614,11 @@ local function UpdateVisit(isReload)
 	elseif left and left.id == current.id and GetServerTime() - leftAt < REENTRY_DELAY then
 		visit = left
 	else
+		if visit then
+			-- passage direct d'une instance à une autre
+			left, leftAt = visit, GetServerTime()
+		end
+		FlushLeft()
 		Record("enter", current.name, current.difficulty, current.kind)
 		current.start = GetServerTime()
 		visit = current
@@ -617,8 +659,14 @@ local function OnEncounterEnd(encounterID, encounterName, difficultyID, _, succe
 		end
 		-- boss tués pendant la visite (sans visite connue : ce seul boss)
 		local record = visit and visit.kills or { kills = {}, done = {} }
+		local new = not record.kills[encounterID]
 		record.kills[encounterID] = true
-		local key = DungeonCompleted(encounterID, record.kills)
+		local key, killed, total = DungeonProgress(encounterID, record)
+		if killed then
+			record.killed, record.total = killed, total
+		elseif new then
+			record.killed, record.total = (record.killed or 0) + 1, nil -- donjon inconnu : boss distincts
+		end
 		if key and not record.done[key] then
 			record.done[key] = true
 			Record("dng", instanceName, difficultyID, Elapsed())
@@ -740,7 +788,15 @@ end
 
 -- Déconnexion : rien de noté si la connexion date de moins de SHORT_DELAY (elle est retirée) ;
 -- renvoie l'événement « out » noté, "short" ou "skip".
+local logoutPartial -- { event, record } : donjon fait en partie noté à la déconnexion (retiré si elle est annulée)
 local function OnLogout()
+	-- donjon en cours ou quitté depuis peu : fait en partie (le suivi s'arrête avec la session)
+	local v, time = visit, GetServerTime()
+	if not v then
+		v, time = left, leftAt
+	end
+	local partial = NotePartial(v, time)
+	logoutPartial = partial and { event = partial, record = v.kills } or nil
 	if loginEvent and GetServerTime() - loginTime < SHORT_DELAY then
 		if not seen[loginEvent] then
 			return "skip"
@@ -761,6 +817,11 @@ local function OnLogoutRequested()
 end
 
 local function OnLogoutCancelled()
+	if logoutPartial then
+		Withdraw(logoutPartial.event)
+		logoutPartial.record.done.partial = nil
+		logoutPartial = nil
+	end
 	if loggedOut == "short" then
 		-- Session courte : la connexion retirée est remise.
 		withdrawn[loginEvent] = nil
@@ -1215,7 +1276,7 @@ for _, event in ipairs({ "PLAYER_LEVEL_UP", "ACHIEVEMENT_EARNED", "PLAYER_EQUIPM
 	"PLAYER_AVG_ITEM_LEVEL_UPDATE", "GROUP_ROSTER_UPDATE", "ENCOUNTER_END", "SCENARIO_COMPLETED",
 	"CHALLENGE_MODE_COMPLETED", "SCENARIO_UPDATE", "SCENARIO_CRITERIA_UPDATE", "NEW_TOY_ADDED", "NEW_MOUNT_ADDED",
 	"NEW_PET_ADDED", "NEW_RECIPE_LEARNED", "MAJOR_FACTION_RENOWN_LEVEL_CHANGED", "FACTION_STANDING_CHANGED", "FRIENDLIST_UPDATE",
-	"BN_FRIEND_LIST_SIZE_CHANGED", "PLAYER_GUILD_UPDATE", "CLUB_ADDED", "CLUB_REMOVED" }) do
+	"BN_FRIEND_LIST_SIZE_CHANGED", "PLAYER_GUILD_UPDATE", "CLUB_ADDED", "CLUB_REMOVED", "CHAT_MSG_SYSTEM" }) do
 	if not C_EventUtils or not C_EventUtils.IsEventValid or C_EventUtils.IsEventValid(event) then
 		events:RegisterEvent(event)
 	end
@@ -1269,6 +1330,13 @@ events:SetScript("OnEvent", function(_, event, ...)
 	elseif event == "PLAYER_LOGOUT" then
 		if not reloading and not loggedOut then
 			OnLogout()
+		end
+	elseif event == "CHAT_MSG_SYSTEM" then
+		-- « <instance> a été réinitialisé. » : l'instance quittée est perdue, donjon fait en partie
+		local message = ...
+		if left and INSTANCE_RESET_SUCCESS and message and not Secret(message)
+			and message == INSTANCE_RESET_SUCCESS:format(left.name) then
+			FlushLeft()
 		end
 	elseif event == "PLAYER_LEVEL_UP" then
 		Record("lvl", (...))

@@ -26,7 +26,7 @@ local SCALES = {
 local WEIGHT = {
 	boss = 3, mplus = 3, lvl = 3, mount = 3,
 	ach = 2, dng = 2, renown = 2, guild = 2,
-	delve = 1, toy = 1, pet = 1, rep = 1, ilvl = 1, friend = 1, club = 1, grp = 1, rcp = 1,
+	delve = 1, dngp = 1, toy = 1, pet = 1, rep = 1, ilvl = 1, friend = 1, club = 1, grp = 1, rcp = 1,
 	enter = 0,
 }
 local MIN_WEIGHT = { jour = 0, semaine = 1, mois = 2, tous = 3 }
@@ -36,7 +36,7 @@ local KIND_LABELS = {
 	guild = L["guilde rejointe ou quittée"], delve = L["gouffre (ou section) terminé"], toy = L["jouet"],
 	pet = L["mascotte"], rep = L["rang de réputation"], ilvl = L["niveau d'objet"], friend = L["ami ajouté ou retiré"],
 	club = L["communauté rejointe ou quittée"], grp = L["équipe groupée"], enter = L["entrée dans une instance"],
-	rcp = L["recette apprise"],
+	rcp = L["recette apprise"], dngp = L["donjon fait en partie"],
 }
 -- Icônes du jeu par type et icône des patchs : celles de Histoire.lua (liste et frise).
 local ICONS = H.ICONS
@@ -230,7 +230,7 @@ local function ShortText(line)
 		return L["iLvl %s"]:format(f[4] or "?")
 	elseif kind == "ach" then
 		return L["Haut fait"] .. n
-	elseif kind == "boss" or kind == "dng" or kind == "enter" then
+	elseif kind == "boss" or kind == "dng" or kind == "dngp" or kind == "enter" then
 		return f[4] or "?"
 	elseif kind == "mplus" then
 		return "+" .. (f[5] or "?") .. " " .. (f[4] or "")

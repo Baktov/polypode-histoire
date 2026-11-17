@@ -20,7 +20,7 @@ local L = ns.L
 local MERGE_WINDOW = 300 -- secondes
 -- Champ de la durée (secondes) des événements de fin d'instance ; il ne compte pas pour réunir
 -- les personnages d'une même ligne.
-local DURATION_FIELD = { delve = 7, dng = 6, mplus = 8, boss = 7 }
+local DURATION_FIELD = { delve = 7, dng = 6, dngp = 8, mplus = 8, boss = 7 }
 local MIN_WIDTH, MIN_HEIGHT = 560, 220
 local DEFAULT_WIDTH, DEFAULT_HEIGHT = 620, 420
 -- Filtres (pastilles du bas de la fenêtre) : clé, libellé, description (infobulle).
@@ -38,7 +38,7 @@ local FILTERS = {
 		.. "retirés, guildes et communautés rejointes ou quittées."] },
 }
 local CATEGORY_OF_KIND = { ["in"] = "conn", out = "conn", ach = "ach", delve = "delve", dng = "dungeon",
-	mplus = "dungeon", boss = "raid", toy = "coll", mount = "coll", pet = "coll", renown = "rep", rep = "rep",
+	dngp = "dungeon", mplus = "dungeon", boss = "raid", toy = "coll", mount = "coll", pet = "coll", renown = "rep", rep = "rep",
 	rcp = "craft", friend = "social", guild = "social", club = "social" }
 local CATEGORY_OF_ENTRY = { delve = "delve", party = "dungeon", raid = "raid" }
 -- Icônes du jeu (Interface\Icons) par type d'événement (liste et frise, mêmes que le site Histoire)
@@ -51,7 +51,7 @@ local ICONS = {
 	rep = "achievement_reputation_01", friend = "achievement_guildperk_everybodysfriend",
 	guild = "inv_shirt_guildtabard_01", club = "inv_misc_groupneedmore", grp = "inv_misc_groupneedmore",
 	lvl = "achievement_level_80", ilvl = "inv_sword_04", enter = "spell_arcane_portaldalaran",
-	rcp = "trade_blacksmithing",
+	rcp = "trade_blacksmithing", dngp = "inv_misc_map_01",
 }
 local CATEGORY_ICONS = {
 	conn = "spell_holy_borrowedtime", ach = ICONS.ach, delve = ICONS.delve, dungeon = ICONS.dng, raid = ICONS.boss,
@@ -388,6 +388,11 @@ local function EventText(line)
 		return say(L["%s termine le gouffre %s"], L["%s terminent le gouffre %s"], name) .. details(tier)
 	elseif kind == "dng" then
 		return say(L["%s termine le donjon %s"], L["%s terminent le donjon %s"], Quoted(f[4])) .. details(DifficultyName(f[5]))
+	elseif kind == "dngp" then
+		-- donjon quitté avant la fin : boss tués (sur le nombre de boss, s'il est connu)
+		local bosses = f[7] and f[7] ~= "" and L["%s boss sur %s"]:format(f[6] or "?", f[7]) or L["%s boss"]:format(f[6] or "?")
+		return say(L["%s fait une partie du donjon %s"], L["%s font une partie du donjon %s"], Quoted(f[4]))
+			.. details(bosses, DifficultyName(f[5]))
 	elseif kind == "mplus" then
 		local timed = f[6] == "1" and "|cff40ff40" .. L["dans les temps"] .. "|r" or "|cffff4040" .. L["hors temps"] .. "|r"
 		return say(L["%s termine la clé %s |cffffd200+%s|r"], L["%s terminent la clé %s |cffffd200+%s|r"], Quoted(f[4]),

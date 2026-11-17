@@ -95,6 +95,7 @@ Within a day, events are in time order:
 | Entering a delve, a dungeon or a raid | 21:15 Mordsith, Darà enter the delve "The Well" |
 | Delve completed (with the section for a delve in several parts) | 21:40 Mordsith, Darà complete the delve "The Well": "..." (tier 8, 25 min) |
 | Dungeon completed (WoW Forever: every required boss killed, in any order; Retail: last boss of the Dungeon Journal, or all its bosses) | 22:10 ... complete the dungeon "..." (Heroic, 32 min) |
+| Dungeon partly done: at least one boss killed, left without coming back within 15 minutes (or logout, entering another instance, dungeon reset); noted at the time you left | 21:40 ... complete part of the dungeon "..." (2 bosses out of 4, 45 min) |
 | Mythic+ key completed (duration: timer) | 22:45 ... complete the key "..." +10 (in time, 28 min) |
 | Raid boss defeated | 23:20 ... defeat "..." (raid, difficulty, 12 min) |
 | Achievement (**click**: open the game's achievement window on it) | Mordsith earns the achievement "..." |
@@ -174,6 +175,7 @@ Each event: `time~character~type~fields`, time = seconds since 1970 (server time
 | `delve` | delve name, tier ("0" in old events: unknown, not shown), section, duration (seconds) |
 | `enter` | instance name, difficulty ID, kind (`delve` / `party` / `raid`) |
 | `dng` | dungeon name, difficulty ID, duration |
+| `dngp` | dungeon name, difficulty ID, bosses killed, number of bosses (empty if unknown), duration (from entry to exit) |
 | `mplus` | dungeon name, key level, in time (1 / 0), key upgrades, duration (timer) |
 | `boss` | boss name, difficulty ID, raid name, duration |
 | `toy` / `mount` / `pet` | ID (item, mount, pet species), name |
