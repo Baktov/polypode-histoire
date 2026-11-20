@@ -61,7 +61,12 @@ communities). A click checks or unchecks (gold chip; the others fade). None chec
 whole journal; otherwise, only the events of the checked categories, days without a kept event
 being hidden. **Logins** works the other way round, as on the Histoire website: it is an exclusion
 filter, on by default (red chip with a cross), hiding logins and logouts; a click shows them again.
-The choice is kept. Narrow window: icons only, active chips keeping their name.
+The choice is kept. Narrow window: icons only, active chips keeping their name. With the Polypode
+theme (Polypode 2.26 and later), active chips take the style's accent color.
+
+With Polypode 2.28 and later, the window follows Polypode's **Window placement** option: as a
+**drawer** (default), it opens against the Polypode window and follows it; with the **magnet**, it
+sticks to it when dragged against an edge.
 ### Timeline
 
 **List** / **Timeline** buttons at the top left of the window (choice kept). The **timeline** shows

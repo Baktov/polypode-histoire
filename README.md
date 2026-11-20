@@ -64,7 +64,12 @@ s'estompent). Aucune cochée (par défaut) : tout le journal ; sinon, seuls les 
 catégories cochées, les jours sans événement retenu étant masqués. **Connexions** fonctionne à
 l'inverse, comme sur le site Histoire : c'est un filtre d'exclusion, actif par défaut (pastille
 rouge avec une croix) qui masque les connexions et déconnexions ; un clic les remontre. Le choix
-est gardé. Fenêtre étroite : icônes seules, le nom des pastilles actives restant affiché.
+est gardé. Fenêtre étroite : icônes seules, le nom des pastilles actives restant affiché. Avec le
+thème Polypode (Polypode 2.26 et suivants), les pastilles actives prennent la couleur d'accent du style.
+
+Avec Polypode 2.28 et suivants, la fenêtre suit l'option **Placement des fenêtres** de Polypode : en
+**tiroir** (défaut), elle s'ouvre accolée à la fenêtre Polypode et la suit ; **aimantée**, elle s'y
+accroche quand on la glisse contre un bord.
 ### Frise
 
 Boutons **Liste** / **Frise** en haut à gauche de la fenêtre (choix gardé). La **frise** montre le
@@ -218,6 +223,7 @@ other language).*
 
 ## Version
 
+`1.22.0` : avec Polypode 2.28, la fenêtre s'ouvre en **tiroir** contre la fenêtre Polypode (ou s'y aimante, selon l'option « Placement des fenêtres » de Polypode) ; pastilles de filtre aux couleurs du thème Polypode.
 `1.21.0` : filtre **Connexions** inversé, comme sur le site Histoire : actif par défaut (pastille rouge avec une croix), il masque les connexions et déconnexions ; un clic les remontre.
 `1.20.0` : **donjon fait en partie** : un donjon quitté avec au moins un boss tué, sans y revenir dans les 15 minutes, est noté avec le nombre de boss tués (« 2 boss sur 4 »), à l'heure de la sortie ; aussi à la déconnexion, en entrant dans une autre instance ou quand le donjon est réinitialisé.
 `1.19.1` : WoW Forever : un **donjon** est noté terminé quand tous ses boss obligatoires ont été tués, dans n'importe quel ordre (avant : seulement si le dernier boss du Journal des donjons mourait en dernier ; le Gouffre de Ragefeu fini sur Oggleflint n'était pas noté). Les boss tués sont gardés après un `/reload`.

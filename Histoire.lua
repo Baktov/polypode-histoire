@@ -675,7 +675,20 @@ local function CreateChip(parent, iconName, onClick, onEnter)
 	return chip
 end
 
+-- Couleurs des pastilles : celles du thème Polypode s'il est actif (Polypode 2.28 : accent du
+-- module, bordure, texte), sinon doré et gris.
+local function ChipColors()
+	if P.IsPolypodeTheme and P.IsPolypodeTheme() then
+		local accent = { P.GetThemeColor("accent", "Histoire") }
+		local border = { P.GetThemeColor("border") }
+		local muted = { P.GetThemeColor("muted") }
+		return accent, border, muted
+	end
+	return { 1, 0.82, 0.2 }, { 0.45, 0.45, 0.45 }, { 0.75, 0.75, 0.75 }
+end
+
 local function PaintChip(chip, on, dim, exclude)
+	local accent, border, muted = ChipColors()
 	chip.forbid:SetShown(exclude and on or false)
 	if exclude and on then
 		-- Filtre d'exclusion actif (connexions masquées) : rouge, comme sur le site.
@@ -683,13 +696,13 @@ local function PaintChip(chip, on, dim, exclude)
 		chip:SetBackdropBorderColor(0.9, 0.25, 0.2, 0.9)
 		chip.label:SetTextColor(1, 0.45, 0.4)
 	elseif on then
-		chip:SetBackdropColor(1, 0.82, 0.2, 0.22)
-		chip:SetBackdropBorderColor(1, 0.82, 0.2, 0.9)
+		chip:SetBackdropColor(accent[1], accent[2], accent[3], 0.22)
+		chip:SetBackdropBorderColor(accent[1], accent[2], accent[3], 0.9)
 		chip.label:SetTextColor(1, 1, 1)
 	else
 		chip:SetBackdropColor(0, 0, 0, 0.35)
-		chip:SetBackdropBorderColor(0.45, 0.45, 0.45, 0.8)
-		chip.label:SetTextColor(0.75, 0.75, 0.75)
+		chip:SetBackdropBorderColor(border[1], border[2], border[3], 0.8)
+		chip.label:SetTextColor(muted[1], muted[2], muted[3])
 	end
 	chip.icon:SetDesaturated(dim and true or false)
 	chip.icon:SetAlpha(dim and 0.6 or 1)
@@ -947,6 +960,10 @@ local function Build()
 	grip:SetScript("OnMouseUp", function()
 		frame:StopMovingOrSizing()
 		Settings().width, Settings().height = frame:GetSize()
+		-- Fenêtre en tiroir ou aimantée : rattachée à la fenêtre Polypode (Polypode 2.28).
+		if P.RefreshDocking then
+			P.RefreshDocking(frame)
+		end
 	end)
 	-- Double-clic sur la barre de titre : taille par défaut (Polypode 2.12).
 	if P.EnableTitleDoubleClick then
@@ -959,6 +976,14 @@ local function Build()
 	P.ui.histoireFrame = frame
 	if P.SkinFrame then
 		P.SkinFrame(frame)
+	end
+	-- Tiroir ou aimant contre la fenêtre Polypode, et pastilles repeintes à chaque changement de
+	-- style du thème (Polypode 2.28).
+	if P.RegisterModuleWindow then
+		P.RegisterModuleWindow(frame, "Histoire")
+	end
+	if P.OnThemeChanged then
+		P.OnThemeChanged(RefreshChips)
 	end
 	if P.SkinPanel then
 		P.SkinPanel(listPanel)
