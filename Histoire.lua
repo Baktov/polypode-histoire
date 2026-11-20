@@ -977,10 +977,10 @@ local function Build()
 	if P.SkinFrame then
 		P.SkinFrame(frame)
 	end
-	-- Tiroir ou aimant contre la fenêtre Polypode, et pastilles repeintes à chaque changement de
+	-- Tiroir, aimant ou fenêtre unique (clé = celle de son bouton), et pastilles repeintes à chaque changement de
 	-- style du thème (Polypode 2.28).
 	if P.RegisterModuleWindow then
-		P.RegisterModuleWindow(frame, "Histoire")
+		P.RegisterModuleWindow(frame, "Polypode_Histoire")
 	end
 	if P.OnThemeChanged then
 		P.OnThemeChanged(RefreshChips)

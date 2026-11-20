@@ -69,7 +69,8 @@ thème Polypode (Polypode 2.26 et suivants), les pastilles actives prennent la c
 
 Avec Polypode 2.28 et suivants, la fenêtre suit l'option **Placement des fenêtres** de Polypode : en
 **tiroir** (défaut), elle s'ouvre accolée à la fenêtre Polypode et la suit ; **aimantée**, elle s'y
-accroche quand on la glisse contre un bord.
+accroche quand on la glisse contre un bord ; en **fenêtre unique** (Polypode 2.29), elle s'ouvre à la
+place du module affiché, avec la colonne des modules sur le côté.
 ### Frise
 
 Boutons **Liste** / **Frise** en haut à gauche de la fenêtre (choix gardé). La **frise** montre le
@@ -223,6 +224,7 @@ other language).*
 
 ## Version
 
+`1.23.0` : avec Polypode 2.29, la fenêtre peut aussi prendre la place de la **fenêtre unique** (option « Placement des fenêtres » de Polypode).
 `1.22.0` : avec Polypode 2.28, la fenêtre s'ouvre en **tiroir** contre la fenêtre Polypode (ou s'y aimante, selon l'option « Placement des fenêtres » de Polypode) ; pastilles de filtre aux couleurs du thème Polypode.
 `1.21.0` : filtre **Connexions** inversé, comme sur le site Histoire : actif par défaut (pastille rouge avec une croix), il masque les connexions et déconnexions ; un clic les remontre.
 `1.20.0` : **donjon fait en partie** : un donjon quitté avec au moins un boss tué, sans y revenir dans les 15 minutes, est noté avec le nombre de boss tués (« 2 boss sur 4 »), à l'heure de la sortie ; aussi à la déconnexion, en entrant dans une autre instance ou quand le donjon est réinitialisé.

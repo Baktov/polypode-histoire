@@ -66,7 +66,8 @@ theme (Polypode 2.26 and later), active chips take the style's accent color.
 
 With Polypode 2.28 and later, the window follows Polypode's **Window placement** option: as a
 **drawer** (default), it opens against the Polypode window and follows it; with the **magnet**, it
-sticks to it when dragged against an edge.
+sticks to it when dragged against an edge; as a **single window** (Polypode 2.29), it opens in place of
+the module shown, with the column of modules on the side.
 ### Timeline
 
 **List** / **Timeline** buttons at the top left of the window (choice kept). The **timeline** shows
