@@ -15,7 +15,9 @@ local L = ns.L
 -- Clic droit sur une ligne d'événement : la supprimer du journal, après confirmation.
 -- FILTRES (cases en bas à gauche de la fenêtre, PolypodeHistoireDB.filters) : aucune cochée = tout
 -- le journal ; sinon seuls les événements des catégories cochées (FILTERS, EventCategory), les
--- jours, mois et années sans événement retenu étant omis.
+-- jours, mois et années sans événement retenu étant omis. Connexions : filtre d'exclusion, comme
+-- sur le site Histoire (pastille rouge barrée, cochée par défaut = connexions et déconnexions
+-- masquées ; PolypodeHistoireDB.showConn = vrai les remontre).
 
 local MERGE_WINDOW = 300 -- secondes
 -- Champ de la durée (secondes) des événements de fin d'instance ; il ne compte pas pour réunir
@@ -25,7 +27,7 @@ local MIN_WIDTH, MIN_HEIGHT = 560, 220
 local DEFAULT_WIDTH, DEFAULT_HEIGHT = 620, 420
 -- Filtres (pastilles du bas de la fenêtre) : clé, libellé, description (infobulle).
 local FILTERS = {
-	{ key = "conn", label = L["Connexions"], tip = L["Connexions et déconnexions (avec le temps joué)."] },
+	{ key = "conn", exclude = true, label = L["Connexions"], tip = L["Connexions et déconnexions (avec le temps joué)."] },
 	{ key = "ach", label = L["Hauts faits"], tip = L["Hauts faits obtenus."] },
 	{ key = "delve", label = L["Gouffres"], tip = L["Entrées dans un gouffre et gouffres (ou sections) terminés."] },
 	{ key = "dungeon", label = L["Donjons"], tip = L["Entrées dans un donjon, donjons terminés et clés mythiques+."] },
@@ -110,6 +112,7 @@ local function Settings()
 	PolypodeHistoireDB = PolypodeHistoireDB or {}
 	PolypodeHistoireDB.open = PolypodeHistoireDB.open or {}
 	PolypodeHistoireDB.filters = PolypodeHistoireDB.filters or {}
+	PolypodeHistoireDB.filters.conn = nil -- ancien filtre « seulement les connexions » (avant la 1.21.0)
 	if PolypodeHistoireDB.showPatches == nil then
 		PolypodeHistoireDB.showPatches = true
 	end
@@ -136,20 +139,29 @@ local function IsNoise(event)
 end
 
 -- Événements d'un jour retenus par les filtres (tous si aucun n'est coché), sans les événements à
--- ignorer.
+-- ignorer ni, par défaut, les connexions et déconnexions (showConn).
 local function Filtered(list)
-	local filters = Settings().filters
+	local settings = Settings()
+	local filters, hideConn = settings.filters, not settings.showConn
 	local any = next(filters) ~= nil
 	local kept = {}
 	for _, event in ipairs(list) do
 		if not IsNoise(event) then
-			local category = any and EventCategory(event)
-			if not any or (category and filters[category]) then
+			local category = (any or hideConn) and EventCategory(event)
+			if not (hideConn and category == "conn") and (not any or (category and filters[category])) then
 				kept[#kept + 1] = event
 			end
 		end
 	end
 	return kept
+end
+
+-- Pastille active : catégorie cochée, ou connexions masquées (filtre d'exclusion, actif par défaut).
+local function ChipOn(settings, filter)
+	if filter.exclude then
+		return not settings.showConn
+	end
+	return settings.filters[filter.key] == true
 end
 
 local function ShowTooltip()
@@ -648,6 +660,12 @@ local function CreateChip(parent, iconName, onClick, onEnter)
 	chip.label = chip:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
 	chip.label:SetPoint("LEFT", chip.icon, "RIGHT", 4, 0)
 	chip.label:SetWordWrap(false)
+	-- Sens interdit (filtre d'exclusion actif) : croix rouge sur l'icône.
+	chip.forbid = chip:CreateTexture(nil, "OVERLAY")
+	chip.forbid:SetSize(CHIP_ICON, CHIP_ICON)
+	chip.forbid:SetPoint("CENTER", chip.icon)
+	chip.forbid:SetTexture("Interface\\RaidFrame\\ReadyCheck-NotReady")
+	chip.forbid:Hide()
 	local hover = chip:CreateTexture(nil, "HIGHLIGHT")
 	hover:SetAllPoints()
 	hover:SetColorTexture(1, 1, 1, 0.08)
@@ -657,8 +675,14 @@ local function CreateChip(parent, iconName, onClick, onEnter)
 	return chip
 end
 
-local function PaintChip(chip, on, dim)
-	if on then
+local function PaintChip(chip, on, dim, exclude)
+	chip.forbid:SetShown(exclude and on or false)
+	if exclude and on then
+		-- Filtre d'exclusion actif (connexions masquées) : rouge, comme sur le site.
+		chip:SetBackdropColor(0.8, 0.15, 0.1, 0.22)
+		chip:SetBackdropBorderColor(0.9, 0.25, 0.2, 0.9)
+		chip.label:SetTextColor(1, 0.45, 0.4)
+	elseif on then
 		chip:SetBackdropColor(1, 0.82, 0.2, 0.22)
 		chip:SetBackdropBorderColor(1, 0.82, 0.2, 0.9)
 		chip.label:SetTextColor(1, 1, 1)
@@ -672,6 +696,7 @@ local function PaintChip(chip, on, dim)
 end
 
 -- État des pastilles : cochées en doré ; si au moins une est cochée, les autres sont estompées.
+-- Connexions : rouge avec une croix quand elles sont masquées, jamais estompée.
 local function RefreshChips()
 	if not frame or not frame.filterChips then
 		return
@@ -679,8 +704,9 @@ local function RefreshChips()
 	local settings = Settings()
 	local any = next(settings.filters) ~= nil
 	for _, chip in ipairs(frame.filterChips) do
-		local on = settings.filters[chip.filter.key] == true
-		PaintChip(chip, on, any and not on)
+		local on = ChipOn(settings, chip.filter)
+		local exclude = chip.filter.exclude
+		PaintChip(chip, on, not exclude and any and not on, exclude)
 	end
 	PaintChip(frame.patchChip, settings.showPatches, false)
 end
@@ -693,12 +719,12 @@ local function LayoutChips()
 	end
 	local available = frame:GetWidth() - 10 - frame.patchChip:GetWidth() - 24 - 12
 	local chosen
-	local filters = Settings().filters
+	local settings = Settings()
 	for mode = 1, 3 do
 		local total = 0
 		for _, chip in ipairs(frame.filterChips) do
 			-- 1 : tous les libellés ; 2 : libellés des seules pastilles cochées ; 3 : icônes seules.
-			local named = mode == 1 or (mode == 2 and filters[chip.filter.key])
+			local named = mode == 1 or (mode == 2 and ChipOn(settings, chip.filter))
 			chip.label:SetText(named and chip.filter.label or "")
 			chip.label:SetShown(named and true or false)
 			local width = named and (CHIP_ICON + 14 + chip.label:GetStringWidth()) or (CHIP_ICON + 8)
@@ -783,8 +809,12 @@ local function Build()
 	frame.filterChips = {}
 	for _, filter in ipairs(FILTERS) do
 		local chip = CreateChip(frame, CATEGORY_ICONS[filter.key], function()
-			local filters = Settings().filters
-			filters[filter.key] = not filters[filter.key] or nil
+			local settings = Settings()
+			if filter.exclude then
+				settings.showConn = not settings.showConn or nil
+			else
+				settings.filters[filter.key] = not settings.filters[filter.key] or nil
+			end
 			LayoutChips() -- fenêtre étroite : le nom des pastilles cochées s'affiche
 			RefreshChips()
 			ns.Refresh()
@@ -792,8 +822,13 @@ local function Build()
 			GameTooltip:SetOwner(self, "ANCHOR_TOP")
 			GameTooltip:AddLine(filter.label)
 			GameTooltip:AddLine(filter.tip, 1, 1, 1, true)
-			GameTooltip:AddLine(L["Cochée : n'affiche que ces événements (avec les autres cases cochées). Aucune "
-				.. "case cochée : tout le journal."], 0.7, 0.7, 0.7, true)
+			if filter.exclude then
+				GameTooltip:AddLine(Settings().showConn and L["Affichées. Clic : les masquer."]
+					or L["Masquées (par défaut). Clic : les afficher."], 0.7, 0.7, 0.7, true)
+			else
+				GameTooltip:AddLine(L["Cochée : n'affiche que ces événements (avec les autres cases cochées). Aucune "
+					.. "case cochée : tout le journal."], 0.7, 0.7, 0.7, true)
+			end
 			ShowTooltip()
 		end)
 		chip.filter = filter
@@ -963,7 +998,9 @@ function ns.Refresh()
 	frame.collapseButton.collapseAll = anyOpen
 	frame.collapseButton:SetText(anyOpen and L["Tout replier"] or L["Tout déplier"])
 	listPanel.header:SetText(HeaderText())
-	frame.list.emptyText:SetText(next(Settings().filters) and L["Aucun événement pour les filtres cochés."]
+	local settings = Settings()
+	frame.list.emptyText:SetText((next(settings.filters) or (not settings.showConn and next(ns.GetDays())))
+		and L["Aucun événement pour les filtres cochés."]
 		or L["Aucun événement noté pour l'instant."])
 	frame.list.SetItems(items)
 end

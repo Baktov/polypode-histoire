@@ -166,6 +166,8 @@ P.AddTranslations(ns.L, "deDE", {
 	["Ext"] = "Erw",
 	["Histoire"] = "Chronik",
 	["Cochée : n'affiche que ces événements (avec les autres cases cochées). Aucune case cochée : tout le journal."] = "Aktiviert: zeigt nur diese Ereignisse (mit den anderen aktivierten Kästchen). Kein Kästchen aktiviert: das ganze Journal.",
+	["Affichées. Clic : les masquer."] = "Angezeigt. Klick: ausblenden.",
+	["Masquées (par défaut). Clic : les afficher."] = "Ausgeblendet (Standard). Klick: anzeigen.",
 	["Archive les mois antérieurs au mois précédent (%d jour(s), %d événements) dans Polypode Histoire Archive, puis les retire du journal pour l'alléger. L'archive est complétée à chaque export, jamais remplacée."] = "Archiviert die Monate vor dem Vormonat (%d Tag(e), %d Ereignisse) in Polypode Histoire Archive und entfernt sie dann aus dem Journal, um es zu entlasten. Das Archiv wird bei jedem Export ergänzt, nie ersetzt.",
 	["Tout replier"] = "Alle einklappen",
 	["Tout déplier"] = "Alle ausklappen",

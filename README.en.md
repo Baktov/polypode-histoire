@@ -59,7 +59,9 @@ at the bottom right of the window: show these patch and expansion days or not (g
 profession), **Renown and reputation** and **Social** (friends, guilds,
 communities). A click checks or unchecks (gold chip; the others fade). None checked (default): the
 whole journal; otherwise, only the events of the checked categories, days without a kept event
-being hidden. The choice is kept. Narrow window: icons only, checked chips keeping their name.
+being hidden. **Logins** works the other way round, as on the Histoire website: it is an exclusion
+filter, on by default (red chip with a cross), hiding logins and logouts; a click shows them again.
+The choice is kept. Narrow window: icons only, active chips keeping their name.
 ### Timeline
 
 **List** / **Timeline** buttons at the top left of the window (choice kept). The **timeline** shows
