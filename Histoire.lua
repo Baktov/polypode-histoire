@@ -116,7 +116,7 @@ local function Settings()
 	if PolypodeHistoireDB.showPatches == nil then
 		PolypodeHistoireDB.showPatches = true
 	end
-	if PolypodeHistoireDB.view ~= "frise" then
+	if PolypodeHistoireDB.view ~= "frise" and not (PolypodeHistoireDB.view == "stats" and ns.STATS_ENABLED) then
 		PolypodeHistoireDB.view = "liste"
 	end
 	return PolypodeHistoireDB
@@ -910,9 +910,15 @@ local function Build()
 	-- la frise (Frise.lua) prend la place de la liste ; filtres et case « Ext » communs aux deux.
 	frame.viewButtons = {}
 	local previousView
-	for _, view in ipairs({ { key = "liste", label = L["Liste"], tip = L["Journal en arbre Année > Mois > Jour."] },
+	local views = { { key = "liste", label = L["Liste"], tip = L["Journal en arbre Année > Mois > Jour."] },
 		{ key = "frise", label = L["Frise"], tip = L["Frise chronologique horizontale : jour, semaine, mois ou tout le "
-			.. "journal ; icônes, infobulles, sessions de chaque personnage."] } }) do
+			.. "journal ; icônes, infobulles, sessions de chaque personnage."] } }
+	if ns.STATS_ENABLED and ns.BuildStats then
+		views[#views + 1] = { key = "stats", label = L["Stats"], tip = L["Statistiques de tous les personnages (onglet "
+			.. "Statistiques du panneau du personnage), relevées chaque jour ; survol d'une ligne : courbe de son évolution, "
+			.. "une par personnage."] }
+	end
+	for _, view in ipairs(views) do
 		local button = MakeButton(frame, view.label, 50, function()
 			Settings().view = view.key
 			ns.Refresh()
@@ -931,6 +937,12 @@ local function Build()
 		frame.frisePanel:SetPoint("TOPLEFT", 12, -36)
 		frame.frisePanel:SetPoint("BOTTOMRIGHT", -12, 34)
 		frame.frisePanel:Hide()
+	end
+	if ns.STATS_ENABLED and ns.BuildStats then
+		frame.statsPanel = ns.BuildStats(frame)
+		frame.statsPanel:SetPoint("TOPLEFT", 12, -36)
+		frame.statsPanel:SetPoint("BOTTOMRIGHT", -12, 34)
+		frame.statsPanel:Hide()
 	end
 
 	-- Poignée de redimensionnement (taille gardée).
@@ -996,13 +1008,34 @@ function ns.Refresh()
 		return
 	end
 	RefreshChips()
-	local frise = Settings().view == "frise" and frame.frisePanel
+	local view = Settings().view
+	local frise = view == "frise" and frame.frisePanel
+	local stats = view == "stats" and frame.statsPanel
+	local current = stats and "stats" or frise and "frise" or "liste"
 	for _, button in ipairs(frame.viewButtons) do
-		if button.view == (frise and "frise" or "liste") then
+		if button.view == current then
 			button:LockHighlight()
 		else
 			button:UnlockHighlight()
 		end
+	end
+	-- Vue Stats : ni filtres ni case « Ext » (propres au journal).
+	for _, chip in ipairs(frame.filterChips) do
+		chip:SetShown(not stats)
+	end
+	frame.patchChip:SetShown(not stats)
+	if frame.statsPanel and not stats then
+		frame.statsPanel:Hide()
+	end
+	if stats then
+		listPanel:Hide()
+		if frame.frisePanel then
+			frame.frisePanel:Hide()
+		end
+		frame.statsPanel:Show()
+		ns.SnapshotStats() -- valeurs actuelles du personnage joué
+		ns.RefreshStats()
+		return
 	end
 	if frise then
 		listPanel:Hide()

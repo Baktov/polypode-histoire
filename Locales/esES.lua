@@ -247,4 +247,17 @@ P.AddTranslations(ns.L, "esES", {
 	["Rien sur cette période pour les filtres cochés."] = "Nada en este periodo para los filtros marcados.",
 	["janv. févr. mars avr. mai juin juil. août sept. oct. nov. déc."] = "ene. feb. mar. abr. may. jun. jul. ago. sep. oct. nov. dic.",
 	["dim. lun. mar. mer. jeu. ven. sam."] = "dom. lun. mar. mié. jue. vie. sáb.",
+	-- Stats.lua (et bouton de Histoire.lua)
+	["Stats"] = "Estad.",
+	["Statistiques de tous les personnages (onglet Statistiques du panneau du personnage), relevées chaque jour ; survol d'une ligne : courbe de son évolution, une par personnage."] = "Estadísticas de todos los personajes (pestaña Estadísticas del panel del personaje), registradas cada día; al pasar el ratón por una fila: gráfico de su evolución, una curva por personaje.",
+	["%s en %d j"] = "%s en %d d",
+	["Suivi depuis le %s."] = "Seguimiento desde el %s.",
+	["La courbe se remplira au fil des jours."] = "El gráfico se irá llenando con los días.",
+	["%d j"] = "%d d",
+	["Rechercher..."] = "Buscar...",
+	["Statistique"] = "Estadística",
+	["%d personnage(s), suivi depuis le %s"] = "%d personaje(s), seguimiento desde el %s",
+	["Statistiques indisponibles dans ce client."] = "Estadísticas no disponibles en este cliente.",
+	["Aucune statistique ne correspond à la recherche."] = "Ninguna estadística coincide con la búsqueda.",
+	["Aucune statistique relevée pour l'instant."] = "Ninguna estadística registrada todavía.",
 })

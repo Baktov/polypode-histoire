@@ -140,6 +140,28 @@ retirée si elle est annulée ; `/reload` n'en est pas une. Une **déco-reco de 
 n'est pas notée (le personnage reste connecté dans le journal), ni une **session de moins de
 3 minutes** (connexion puis déconnexion).
 
+### Stats (WoW Forever)
+
+Bouton **Stats** (à droite de Liste / Frise, sur WoW Forever seulement pour l'instant) : les
+**statistiques de tous vos personnages**, celles de l'onglet Statistiques du panneau du
+personnage, rangées par catégorie (titres repliables d'un clic). Une colonne par personnage, à la
+couleur de sa classe (fenêtre étroite : une seule colonne « Tous », la somme), puis **7 j** :
+la progression des 7 derniers jours, tous personnages. Seules les statistiques non nulles pour au
+moins un personnage sont listées ; champ **Rechercher** en haut à gauche (Échap le vide).
+
+**Survol d'une ligne** : infobulle avec le **graphique de son évolution**, une courbe en escalier
+par personnage (couleur de sa classe), du premier relevé à aujourd'hui, l'échelle des valeurs à
+gauche et les dates dessous ; sous le graphique, pour chaque personnage, la valeur actuelle et la
+progression sur 7 et 30 jours.
+
+Le jeu ne garde **aucun historique** des statistiques : Polypode Histoire les relève lui-même, à la
+connexion, toutes les 30 secondes au plus quand elles bougent, et à la déconnexion (un point par
+jour et par statistique, seulement quand la valeur change). Les courbes commencent donc le jour où
+cette version est installée (« Suivi depuis le... ») et se remplissent au fil des jours. Les
+relevés de chaque personnage sont gardés dans son propre fichier (`PolypodeHistoireChar.stats`) et
+recopiés dans le fichier commun (`PolypodeHistoireData.stats`) pour que tous les personnages les
+voient ; ils sont échangés entre les clients connectés comme le journal.
+
 ### Taille du journal et export
 
 L'en-tête de la fenêtre donne le nombre d'événements et la taille estimée du journal dans son
@@ -224,6 +246,7 @@ other language).*
 
 ## Version
 
+`1.24.0` : vue **Stats** (WoW Forever) : statistiques de tous les personnages relevées chaque jour, une colonne par personnage, progression sur 7 jours, recherche ; au survol, graphique de l'évolution avec une courbe par personnage à la couleur de sa classe.
 `1.23.0` : avec Polypode 2.29, la fenêtre peut aussi prendre la place de la **fenêtre unique** (option « Placement des fenêtres » de Polypode).
 `1.22.0` : avec Polypode 2.28, la fenêtre s'ouvre en **tiroir** contre la fenêtre Polypode (ou s'y aimante, selon l'option « Placement des fenêtres » de Polypode) ; pastilles de filtre aux couleurs du thème Polypode.
 `1.21.0` : filtre **Connexions** inversé, comme sur le site Histoire : actif par défaut (pastille rouge avec une croix), il masque les connexions et déconnexions ; un clic les remontre.

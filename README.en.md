@@ -132,6 +132,26 @@ is recorded as soon as it is requested (menu, `/logout`, `/quit`) and removed if
 `/reload` is not one. A **logout-login of less than 3 minutes** is not recorded (the character stays
 logged in in the journal), nor a **session of less than 3 minutes** (login then logout).
 
+### Stats (WoW Forever)
+
+**Stats** button (right of List / Timeline, on WoW Forever only for now): the **statistics of all
+your characters**, those of the Statistics tab of the character panel, sorted by category
+(headers collapse on click). One column per character, in its class colour (narrow window: a
+single "All" column, the sum), then **7 d**: the progress over the last 7 days, all characters.
+Only statistics that are non-zero for at least one character are listed; **Search** field at the
+top left (Escape clears it).
+
+**Hovering a row** shows a tooltip with the **chart of its progress**: one step line per character
+(class colour), from the first reading to today, the value scale on the left and dates below;
+under the chart, for each character, the current value and the progress over 7 and 30 days.
+
+The game keeps **no history** of statistics: Polypode History reads them itself, at login, every 30
+seconds at most while they change, and at logout (one point per day and per statistic, only when
+the value changes). The charts therefore start on the day this version is installed ("Tracked
+since...") and fill in over the days. Each character's readings are kept in its own file
+(`PolypodeHistoireChar.stats`) and copied into the shared file (`PolypodeHistoireData.stats`) so
+that all characters see them; they are exchanged between logged-in clients like the journal.
+
 ### Journal size and export
 
 The window header gives the number of events and the estimated size of the journal in its save

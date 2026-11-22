@@ -260,6 +260,9 @@ local function Send(kind, payload, target)
 	end
 end
 
+ns.Send = Send -- aussi pour les relevés de statistiques (Stats.lua)
+ns.FromItsCharacter = FromItsCharacter
+
 -- Note un événement du personnage joué, à l'heure donnée, et l'envoie aux clients connectés.
 local function RecordAt(time, kind, ...)
 	local parts = { time, ns.CharKey(), kind }
@@ -336,6 +339,13 @@ local function OnMessage(rest, sender)
 		end
 		return
 	end
+	if kind == "S" then
+		-- Relevés de statistiques (Stats.lua, 1.24.0) : vérifiés là-bas.
+		if ns.OnStatsMessage then
+			ns.OnStatsMessage(payload, sender)
+		end
+		return
+	end
 	if kind == "D" then
 		-- Suppression à la main : de n'importe quel client de l'équipe (token vérifié).
 		if seen[payload] then
@@ -374,6 +384,9 @@ local function OnPeer(sender)
 	end
 	for event, kind in pairs(withdrawn) do
 		Send(kind, event, sender)
+	end
+	if ns.OnStatsPeer then
+		ns.OnStatsPeer(sender)
 	end
 end
 
