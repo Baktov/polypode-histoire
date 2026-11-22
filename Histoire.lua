@@ -914,9 +914,11 @@ local function Build()
 		{ key = "frise", label = L["Frise"], tip = L["Frise chronologique horizontale : jour, semaine, mois ou tout le "
 			.. "journal ; icônes, infobulles, sessions de chaque personnage."] } }
 	if ns.STATS_ENABLED and ns.BuildStats then
-		views[#views + 1] = { key = "stats", label = L["Stats"], tip = L["Statistiques de tous les personnages (onglet "
-			.. "Statistiques du panneau du personnage), relevées chaque jour ; survol d'une ligne : courbe de son évolution, "
-			.. "une par personnage."] }
+		views[#views + 1] = { key = "stats", label = L["Stats"], tip = IS_RETAIL
+			and L["Statistiques de tous les personnages (onglet Statistiques des hauts faits), relevées chaque jour ; "
+				.. "survol d'une ligne : courbe de son évolution, une par personnage."]
+			or L["Statistiques de tous les personnages (onglet Statistiques du panneau du personnage), relevées chaque "
+				.. "jour ; survol d'une ligne : courbe de son évolution, une par personnage."] }
 	end
 	for _, view in ipairs(views) do
 		local button = MakeButton(frame, view.label, 50, function()

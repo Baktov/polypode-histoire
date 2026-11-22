@@ -132,10 +132,11 @@ is recorded as soon as it is requested (menu, `/logout`, `/quit`) and removed if
 `/reload` is not one. A **logout-login of less than 3 minutes** is not recorded (the character stays
 logged in in the journal), nor a **session of less than 3 minutes** (login then logout).
 
-### Stats (WoW Forever)
+### Stats
 
-**Stats** button (right of List / Timeline, on WoW Forever only for now): the **statistics of all
-your characters**, those of the Statistics tab of the character panel, sorted by category
+**Stats** button (right of List / Timeline): the **statistics of all your characters**, those of
+the Statistics tab of the character panel on WoW Forever, of the achievements' Statistics tab on
+Retail, sorted by category
 (headers collapse on click). One column per character, in its class colour (narrow window: a
 single "All" column, the sum), then **7 d**: the progress over the last 7 days, all characters.
 Only statistics that are non-zero for at least one character are listed; **Search** field at the
@@ -144,6 +145,10 @@ top left (Escape clears it).
 **Hovering a row** shows a tooltip with the **chart of its progress**: one step line per character
 (class colour), from the first reading to today, the value scale on the left and dates below;
 under the chart, for each character, the current value and the progress over 7 and 30 days.
+
+On Retail, amounts (gold looted, earned from quests…) are shown in gold coins, with the detail
+(gold, silver, copper) in the tooltip; the few statistics that are text (a name) are shown as
+they are, without a chart. Readings never happen in combat: they wait until it ends.
 
 The game keeps **no history** of statistics: Polypode History reads them itself, at login, every 30
 seconds at most while they change, and at logout (one point per day and per statistic, only when

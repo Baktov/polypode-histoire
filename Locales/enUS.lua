@@ -260,4 +260,6 @@ P.AddTranslations(ns.L, "enUS", {
 	["Statistiques indisponibles dans ce client."] = "Statistics unavailable in this client.",
 	["Aucune statistique ne correspond à la recherche."] = "No statistic matches the search.",
 	["Aucune statistique relevée pour l'instant."] = "No statistic recorded yet.",
+	["Statistiques de tous les personnages (onglet Statistiques des hauts faits), relevées chaque jour ; survol d'une ligne : courbe de son évolution, une par personnage."] = "Statistics of all characters (Statistics tab of the achievements), recorded every day; hover a row: chart of its progress, one line per character.",
+	["Valeur en texte : pas de courbe."] = "Text value: no chart.",
 })

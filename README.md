@@ -140,11 +140,11 @@ retirée si elle est annulée ; `/reload` n'en est pas une. Une **déco-reco de 
 n'est pas notée (le personnage reste connecté dans le journal), ni une **session de moins de
 3 minutes** (connexion puis déconnexion).
 
-### Stats (WoW Forever)
+### Stats
 
-Bouton **Stats** (à droite de Liste / Frise, sur WoW Forever seulement pour l'instant) : les
-**statistiques de tous vos personnages**, celles de l'onglet Statistiques du panneau du
-personnage, rangées par catégorie (titres repliables d'un clic). Une colonne par personnage, à la
+Bouton **Stats** (à droite de Liste / Frise) : les **statistiques de tous vos personnages**,
+celles de l'onglet Statistiques du panneau du personnage sur WoW Forever, de l'onglet
+Statistiques des hauts faits sur Retail, rangées par catégorie (titres repliables d'un clic). Une colonne par personnage, à la
 couleur de sa classe (fenêtre étroite : une seule colonne « Tous », la somme), puis **7 j** :
 la progression des 7 derniers jours, tous personnages. Seules les statistiques non nulles pour au
 moins un personnage sont listées ; champ **Rechercher** en haut à gauche (Échap le vide).
@@ -153,6 +153,11 @@ moins un personnage sont listées ; champ **Rechercher** en haut à gauche (Éch
 par personnage (couleur de sa classe), du premier relevé à aujourd'hui, l'échelle des valeurs à
 gauche et les dates dessous ; sous le graphique, pour chaque personnage, la valeur actuelle et la
 progression sur 7 et 30 jours.
+
+Sur Retail, les montants (or ramassé, gagné en quêtes…) s'affichent en pièces d'or, le détail
+(or, argent, cuivre) dans l'infobulle ; les rares statistiques qui sont un texte (un nom) sont
+affichées telles quelles, sans courbe. Le relevé n'a pas lieu en combat : il attend la fin du
+combat.
 
 Le jeu ne garde **aucun historique** des statistiques : Polypode Histoire les relève lui-même, à la
 connexion, toutes les 30 secondes au plus quand elles bougent, et à la déconnexion (un point par
@@ -246,6 +251,7 @@ other language).*
 
 ## Version
 
+`1.25.0` : vue **Stats** aussi sur **Retail** (onglet Statistiques des hauts faits) : chiffres groupés lus, montants en pièces d'or (détail en infobulle), statistiques en texte affichées sans courbe ; relevé reporté en combat.
 `1.24.0` : vue **Stats** (WoW Forever) : statistiques de tous les personnages relevées chaque jour, une colonne par personnage, progression sur 7 jours, recherche ; au survol, graphique de l'évolution avec une courbe par personnage à la couleur de sa classe.
 `1.23.0` : avec Polypode 2.29, la fenêtre peut aussi prendre la place de la **fenêtre unique** (option « Placement des fenêtres » de Polypode).
 `1.22.0` : avec Polypode 2.28, la fenêtre s'ouvre en **tiroir** contre la fenêtre Polypode (ou s'y aimante, selon l'option « Placement des fenêtres » de Polypode) ; pastilles de filtre aux couleurs du thème Polypode.

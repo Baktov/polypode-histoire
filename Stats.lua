@@ -16,15 +16,17 @@
 -- sont renvoyés à un client qui s'annonce : le dernier client qui quitte écrit le fichier commun à
 -- jour.
 --
--- WoW Forever d'abord : sur Retail, certaines valeurs sont mises en forme (or, durées) ; ni relevés
--- ni bouton « Stats » tant que STATS_ENABLED est faux.
+-- WoW Forever (onglet Statistiques du panneau du personnage) et Retail (onglet Statistiques des hauts
+-- faits, 1.25.0). Sur Retail, GetStatistic renvoie le texte affiché : chiffres groupés (« 1,234 »),
+-- montants avec icônes de pièces (gardés en pièces de cuivre, money), ou texte (gardé tel quel, sans
+-- courbe) : voir ParseValue. Relevé programmé reporté en combat.
 
 local _, ns = ...
 local P = Polypode
 local L = ns.L
 local H = ns.H
 
-local STATS_ENABLED = not H.IS_RETAIL
+local STATS_ENABLED = true -- WoW Forever (1.24.0) et Retail (1.25.0)
 local STATS_DELAY = 30 -- secondes : regroupe les CRITERIA_UPDATE (très fréquents)
 local LOGIN_DELAY = 5 -- secondes : statistiques chargées après l'entrée dans le monde
 local CHUNK = 200 -- longueur maximale de la liste « id=valeur » d'un message
@@ -57,15 +59,76 @@ local function Number(value)
 	return BreakUpLargeNumbers and BreakUpLargeNumbers(value) or tostring(value)
 end
 
--- Valeur affichée par le jeu → nombre (« -- » = 0) ; nil si illisible (texte mis en forme, secret).
+-- Texte sûr pour la synchro et le fichier : ni séparateur de message, ni code, 60 caractères au plus.
+local function CleanText(text)
+	return (text:gsub("|T.-|t", ""):gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", ""):gsub("[~,=;|#$\r\n]", " ")
+		:gsub("%s+", " "):gsub("^%s+", ""):gsub("%s+$", ""):sub(1, 60))
+end
+
+local SEPARATORS = "[%s,%.'\194\160]" -- séparateurs de milliers (virgule, point, espace, espace insécable)
+local MONEY_UNITS = { gold = 10000, silver = 100, copper = 1 }
+
+-- Valeur affichée par le jeu → nombre, money (vrai : montant en pièces de cuivre), ou texte.
+-- « -- » = 0 ; Retail : « 1,234 » ou « 1 234 » = 1234, or « 12[or] 3[argent] 4[cuivre] » (icônes |T...|t)
+-- = 120304 ; autre texte : nil, nil, texte nettoyé. Valeur secrète : rien.
 local function ParseValue(quantity)
 	if quantity == nil or (issecretvalue and issecretvalue(quantity)) then
 		return nil
 	end
-	if quantity == "--" then
+	if type(quantity) == "number" then
+		return quantity
+	end
+	if quantity == "--" or quantity == "" then
 		return 0
 	end
-	return tonumber(quantity)
+	local number = tonumber(quantity)
+	if number then
+		return number
+	end
+	-- Chiffres groupés « 1,234,567 » : séparateurs retirés entre deux chiffres (deux passes).
+	local joined = quantity:gsub("(%d)" .. SEPARATORS .. "+(%d)", "%1%2"):gsub("(%d)" .. SEPARATORS .. "+(%d)", "%1%2")
+	number = tonumber(joined)
+	if number then
+		return number
+	end
+	if joined:find("|T", 1, true) then
+		local copper, found = 0, false
+		for amount, path in joined:gmatch("(%d+)%s*|T([^|]+)|t") do
+			local lower = path:lower()
+			local unit = lower:find("gold") and "gold" or lower:find("silver") and "silver"
+				or lower:find("copper") and "copper"
+			if unit then
+				copper = copper + tonumber(amount) * MONEY_UNITS[unit]
+				found = true
+			end
+		end
+		if found then
+			return copper, true
+		end
+	end
+	local text = CleanText(quantity)
+	if text ~= "" then
+		return nil, nil, text
+	end
+	return nil
+end
+
+local GOLD_ICON = "|TInterface\\MoneyFrame\\UI-GoldIcon:0:0:2:0|t"
+
+-- Valeur affichée : nombre groupé ; montant : pièces d'or entières et icône (détail en infobulle).
+local function FormatValue(value, money)
+	if money then
+		return Number(math.floor(value / 10000)) .. GOLD_ICON
+	end
+	return Number(value)
+end
+
+-- Montant complet (or, argent, cuivre) pour l'infobulle.
+local function FormatFull(value, money)
+	if money and GetMoneyString then
+		return GetMoneyString(value, true)
+	end
+	return FormatValue(value, money)
 end
 
 -- SÉRIES ------------------------------------------------------------------------------------------
@@ -107,13 +170,27 @@ local function Pack(series)
 	return table.concat(parts, ";")
 end
 
+-- Personnage : { class, since, s = séries, money = { [id] = true } (montants, Retail), text = { [id] = texte } }.
+-- Fichier : s = { [id] = "jour:valeur;..." }, m = "id,id,..." (montants), t = { [id] = texte }.
+local function NewChar()
+	return { s = {}, money = {}, text = {} }
+end
+
 local function UnpackChar(saved)
-	local entry = { s = {} }
+	local entry = NewChar()
 	if type(saved) == "table" then
 		entry.class, entry.since = saved.class, tonumber(saved.since)
 		for id, text in pairs(type(saved.s) == "table" and saved.s or {}) do
 			if tonumber(id) then
 				entry.s[tonumber(id)] = Unpack(text)
+			end
+		end
+		for id in (type(saved.m) == "string" and saved.m or ""):gmatch("%d+") do
+			entry.money[tonumber(id)] = true
+		end
+		for id, text in pairs(type(saved.t) == "table" and saved.t or {}) do
+			if tonumber(id) and type(text) == "string" then
+				entry.text[tonumber(id)] = text
 			end
 		end
 	end
@@ -127,7 +204,25 @@ local function PackChar(entry)
 			saved.s[id] = Pack(series)
 		end
 	end
+	local money = {}
+	for id in pairs(entry.money) do
+		money[#money + 1] = id
+	end
+	if #money > 0 then
+		table.sort(money)
+		saved.m = table.concat(money, ",")
+	end
+	if next(entry.text) then
+		saved.t = {}
+		for id, text in pairs(entry.text) do
+			saved.t[id] = text
+		end
+	end
 	return saved
+end
+
+local function HasData(entry)
+	return next(entry.s) ~= nil or next(entry.text) ~= nil
 end
 
 -- Union des points de source dans dest (même jour : valeur de source).
@@ -135,6 +230,12 @@ local function Merge(dest, source)
 	dest.class = dest.class or source.class
 	if source.since and (not dest.since or source.since < dest.since) then
 		dest.since = source.since
+	end
+	for id in pairs(source.money) do
+		dest.money[id] = true
+	end
+	for id, text in pairs(source.text) do
+		dest.text[id] = text
 	end
 	for id, series in pairs(source.s) do
 		local target = dest.s[id]
@@ -215,7 +316,8 @@ end
 
 -- SYNCHRO -----------------------------------------------------------------------------------------
 
--- Envoie le dernier point des statistiques ids du personnage joué (groupés par jour, découpés).
+-- Envoie le dernier point des statistiques ids du personnage joué (groupés par jour, découpés) :
+-- « id=valeur », « id=$valeur » (montant), « id=#texte » (statistique en texte, jour du relevé).
 local function SendLast(ids, target)
 	local mine = myKey and data[myKey]
 	if not mine or not ns.Send then
@@ -228,7 +330,11 @@ local function SendLast(ids, target)
 		if n > 0 then
 			local day = series.d[n]
 			byDay[day] = byDay[day] or {}
-			table.insert(byDay[day], id .. "=" .. series.v[n])
+			table.insert(byDay[day], id .. "=" .. (mine.money[id] and "$" or "") .. series.v[n])
+		elseif mine.text[id] then
+			local day = Today()
+			byDay[day] = byDay[day] or {}
+			table.insert(byDay[day], id .. "=#" .. mine.text[id])
 		end
 	end
 	for day, parts in pairs(byDay) do
@@ -257,14 +363,23 @@ function ns.OnStatsMessage(payload, sender)
 	end
 	local entry = data[key]
 	if not entry then
-		entry = { s = {} }
+		entry = NewChar()
 		data[key] = entry
 	end
 	entry.since = entry.since or day
-	for id, value in list:gmatch("(%d+)=(%d+)") do
+	for id, value in list:gmatch("(%d+)=([^,]*)") do
 		id = tonumber(id)
-		entry.s[id] = entry.s[id] or NewSeries()
-		Insert(entry.s[id], day, tonumber(value))
+		local mark, rest = value:sub(1, 1), value:sub(2)
+		if mark == "#" then
+			entry.text[id] = rest
+		else
+			local number = tonumber(mark == "$" and rest or value)
+			if number then
+				entry.money[id] = mark == "$" or nil
+				entry.s[id] = entry.s[id] or NewSeries()
+				Insert(entry.s[id], day, number)
+			end
+		end
 	end
 	if ns.RefreshStats then
 		ns.RefreshStats()
@@ -297,8 +412,14 @@ local function Snapshot()
 	local changed = {}
 	for _, node in ipairs(cats.ordered) do
 		for _, id in ipairs(node.stats) do
-			local value = ParseValue(GetStatistic(id))
+			local value, money, text = ParseValue(GetStatistic(id))
+			if text and mine.text[id] ~= text then
+				mine.text[id] = text
+				changed[#changed + 1] = id
+				sessionChanged[id] = true
+			end
 			if value and value > 0 then
+				mine.money[id] = money or nil
 				local series = mine.s[id]
 				if not series then
 					series = NewSeries()
@@ -322,9 +443,18 @@ local function Snapshot()
 end
 ns.SnapshotStats = Snapshot
 
+-- Relevé programmé (CRITERIA_UPDATE) : reporté tant qu'on est en combat (événement très fréquent).
+local function ScheduledSnapshot()
+	if InCombatLockdown and InCombatLockdown() then
+		C_Timer.After(STATS_DELAY, ScheduledSnapshot)
+		return
+	end
+	Snapshot()
+end
+
 local function OnLogin()
 	myKey = ns.CharKey()
-	local entry = data[myKey] or { s = {} }
+	local entry = data[myKey] or NewChar()
 	PolypodeHistoireChar = PolypodeHistoireChar or {}
 	Merge(entry, UnpackChar(PolypodeHistoireChar.stats))
 	entry.class = select(2, UnitClass("player")) or entry.class
@@ -335,7 +465,7 @@ end
 local function Save()
 	local all = {}
 	for key, entry in pairs(data) do
-		if next(entry.s) then
+		if HasData(entry) then
 			all[key] = PackChar(entry)
 		end
 	end
@@ -370,7 +500,7 @@ if STATS_ENABLED then
 		elseif event == "CRITERIA_UPDATE" then
 			if myKey and not pending then
 				pending = true
-				C_Timer.After(STATS_DELAY, Snapshot)
+				C_Timer.After(STATS_DELAY, ScheduledSnapshot)
 			end
 		end
 	end)
@@ -417,7 +547,7 @@ end
 local function Characters()
 	local keys = {}
 	for key, entry in pairs(data) do
-		if next(entry.s) then
+		if HasData(entry) then
 			keys[#keys + 1] = key
 		end
 	end
@@ -457,17 +587,20 @@ local function BuildItems(keys)
 	local function Add(node)
 		local rows = {}
 		for _, id in ipairs(node.stats) do
-			local values, any = {}, false
+			local values, texts, any, money = {}, {}, false, false
 			for _, key in ipairs(keys) do
-				local series = data[key].s[id]
+				local entry = data[key]
+				local series = entry.s[id]
 				local value = series and Last(series) or 0
 				values[key] = value
-				any = any or value > 0
+				texts[key] = value == 0 and entry.text[id] or nil
+				any = any or value > 0 or texts[key] ~= nil
+				money = money or entry.money[id] == true
 			end
 			local name = StatName(id)
 			if any and (search == "" or name:lower():find(search, 1, true)) then
-				rows[#rows + 1] = { stat = id, name = name, values = values, delta = Delta(id, keys, DELTA_DAYS),
-					category = node.name, depth = node.depth }
+				rows[#rows + 1] = { stat = id, name = name, values = values, texts = texts, money = money,
+					delta = Delta(id, keys, DELTA_DAYS), category = node.name, depth = node.depth }
 			end
 		end
 		local childItems = {}
@@ -541,14 +674,14 @@ local function BuildTip()
 		line:SetColorTexture(1, 1, 1, i == 1 and 0.25 or 0.08)
 		line:SetHeight(1)
 		tip.grid[i] = line
-		local label = tip:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+		local label = chart:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall") -- caché avec le graphique
 		label:SetJustifyH("RIGHT")
 		label:SetWidth(AXIS_W - 6)
 		tip.yLabels[i] = label
 	end
 	tip.xLabels = {}
 	for i = 1, 3 do
-		local label = tip:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+		local label = chart:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
 		tip.xLabels[i] = label
 	end
 	tip.xLabels[1]:SetPoint("TOPLEFT", chart, "BOTTOMLEFT", 0, -3)
@@ -601,9 +734,22 @@ local function TipLegend(i)
 	return row
 end
 
-local function DeltaText(n, days)
-	local text = L["%s en %d j"]:format((n > 0 and "+" or "") .. Number(n), days)
+local function DeltaText(n, days, money)
+	local text = L["%s en %d j"]:format((n > 0 and "+" or "") .. FormatValue(n, money), days)
 	return (n > 0 and "|cff7fff7f" or "|cff999999") .. text .. "|r"
+end
+
+-- Place l'infobulle à droite de la ligne survolée, sinon à gauche (bord de l'écran).
+local function PlaceTip(row, height)
+	tip:SetHeight(height)
+	tip:ClearAllPoints()
+	local right = row:GetRight() or 0
+	if right + TIP_W + 8 < (UIParent:GetRight() or 0) then
+		tip:SetPoint("TOPLEFT", row, "TOPRIGHT", 8, 0)
+	else
+		tip:SetPoint("TOPRIGHT", row, "TOPLEFT", -8, 0)
+	end
+	tip:Show()
 end
 
 -- Infobulle d'une statistique : une courbe en escalier par personnage (couleur de sa classe), du
@@ -643,6 +789,33 @@ local function ShowStatTip(row, item)
 		legend:Hide()
 	end
 
+	-- Statistique en texte (Retail) : pas de courbe, la valeur de chaque personnage.
+	if #series == 0 then
+		tip.chart:Hide()
+		local previous, count = tip.subtitle, 0
+		for _, key in ipairs(Characters()) do
+			local text = item.texts[key]
+			if text then
+				count = count + 1
+				local legend = TipLegend(count)
+				local r, g, b = ClassColor(key)
+				legend.swatch:SetColorTexture(r, g, b, 1)
+				legend.name:SetText(ShortName(key))
+				legend.value:SetText(text)
+				legend:ClearAllPoints()
+				legend:SetPoint("TOPLEFT", previous, "BOTTOMLEFT", 0, count == 1 and -8 or -2)
+				previous = legend
+			end
+		end
+		tip.footer:ClearAllPoints()
+		tip.footer:SetPoint("TOPLEFT", previous, "BOTTOMLEFT", 0, -6)
+		tip.footer:SetText(L["Valeur en texte : pas de courbe."])
+		PlaceTip(row, 10 + tip.title:GetStringHeight() + 2 + tip.subtitle:GetStringHeight() + 8 + count * 16 + 6
+			+ tip.footer:GetStringHeight() + 12)
+		return
+	end
+	tip.chart:Show()
+
 	local today = Today()
 	first = first or today
 	local t0, t1 = DayTime(first), DayTime(today) + DAY
@@ -667,7 +840,7 @@ local function ShowStatTip(row, item)
 		tip.grid[i]:SetPoint("BOTTOMLEFT", tip.chart, "BOTTOMLEFT", 0, Y(v))
 		tip.grid[i]:SetPoint("BOTTOMRIGHT", tip.chart, "BOTTOMRIGHT", 0, Y(v))
 		tip.yLabels[i]:SetPoint("RIGHT", tip.chart, "BOTTOMLEFT", -6, Y(v))
-		tip.yLabels[i]:SetText(Number(math.floor(v + 0.5)))
+		tip.yLabels[i]:SetText(FormatValue(math.floor(v + 0.5), item.money))
 	end
 	tip.xLabels[1]:SetText(date(L["%d/%m"], t0))
 	tip.xLabels[2]:SetText(date(L["%d/%m"], t0 + (t1 - t0) / 2))
@@ -702,9 +875,9 @@ local function ShowStatTip(row, item)
 		local legend = TipLegend(index)
 		legend.swatch:SetColorTexture(r, g, b, 1)
 		legend.name:SetText(ShortName(entry.key))
-		legend.value:SetText(Number(Last(entry.s)) .. "   "
-			.. DeltaText(Last(entry.s) - ValueAt(entry.s, AddDays(today, -7), entry.since), 7) .. "  "
-			.. DeltaText(Last(entry.s) - ValueAt(entry.s, AddDays(today, -30), entry.since), 30))
+		legend.value:SetText(FormatFull(Last(entry.s), item.money) .. "   "
+			.. DeltaText(Last(entry.s) - ValueAt(entry.s, AddDays(today, -7), entry.since), 7, item.money) .. "  "
+			.. DeltaText(Last(entry.s) - ValueAt(entry.s, AddDays(today, -30), entry.since), 30, item.money))
 		legend:ClearAllPoints()
 		if index == 1 then
 			legend:SetPoint("TOPLEFT", tip.chart, "BOTTOMLEFT", -AXIS_W, -18)
@@ -722,17 +895,8 @@ local function ShowStatTip(row, item)
 	end
 	tip.footer:SetText(sinceText)
 
-	local height = 10 + tip.title:GetStringHeight() + 2 + tip.subtitle:GetStringHeight() + 10 + CHART_H + 18
-		+ #series * 16 + 6 + tip.footer:GetStringHeight() + 12
-	tip:SetHeight(height)
-	tip:ClearAllPoints()
-	local right = row:GetRight() or 0
-	if right + TIP_W + 8 < (UIParent:GetRight() or 0) then
-		tip:SetPoint("TOPLEFT", row, "TOPRIGHT", 8, 0)
-	else
-		tip:SetPoint("TOPRIGHT", row, "TOPLEFT", -8, 0)
-	end
-	tip:Show()
+	PlaceTip(row, 10 + tip.title:GetStringHeight() + 2 + tip.subtitle:GetStringHeight() + 10 + CHART_H + 18
+		+ #series * 16 + 6 + tip.footer:GetStringHeight() + 12)
 end
 
 local function HideStatTip()
@@ -783,6 +947,7 @@ local function Column(row, i)
 		col = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
 		col:SetJustifyH("RIGHT")
 		col:SetWidth(COL_W - 6)
+		col:SetWordWrap(false)
 		row.cols[i] = col
 	end
 	col:Show()
@@ -823,7 +988,9 @@ local function Apply(row, item)
 		local value
 		if column.delta then
 			value = item.delta
-			col:SetText(value > 0 and ("|cff7fff7f+" .. Number(value) .. "|r") or "|cff666666–|r")
+			col:SetText(value > 0 and ("|cff7fff7f+" .. FormatValue(value, item.money) .. "|r") or "|cff666666–|r")
+		elseif not column.total and item.texts[column.key] then
+			col:SetText(item.texts[column.key]) -- statistique en texte (Retail) : tronquée, entière en infobulle
 		else
 			if column.total then
 				value = 0
@@ -833,7 +1000,7 @@ local function Apply(row, item)
 			else
 				value = item.values[column.key] or 0
 			end
-			col:SetText(value > 0 and Number(value) or "|cff666666–|r")
+			col:SetText(value > 0 and FormatValue(value, item.money) or "|cff666666–|r")
 		end
 	end
 end
