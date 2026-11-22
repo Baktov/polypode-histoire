@@ -155,7 +155,9 @@ seconds at most while they change, and at logout (one point per day and per stat
 the value changes). The charts therefore start on the day this version is installed ("Tracked
 since...") and fill in over the days. Each character's readings are kept in its own file
 (`PolypodeHistoireChar.stats`) and copied into the shared file (`PolypodeHistoireData.stats`) so
-that all characters see them; they are exchanged between logged-in clients like the journal.
+that all characters see them; they are exchanged between logged-in clients like the journal. The shared file also keeps the catalogue of
+statistics (categories and names, in the game's language, `statCatalog`), so that the Polypode History
+website can show them in its **Stats** tab.
 
 ### Journal size and export
 

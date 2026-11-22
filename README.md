@@ -165,7 +165,9 @@ jour et par statistique, seulement quand la valeur change). Les courbes commence
 cette version est installée (« Suivi depuis le... ») et se remplissent au fil des jours. Les
 relevés de chaque personnage sont gardés dans son propre fichier (`PolypodeHistoireChar.stats`) et
 recopiés dans le fichier commun (`PolypodeHistoireData.stats`) pour que tous les personnages les
-voient ; ils sont échangés entre les clients connectés comme le journal.
+voient ; ils sont échangés entre les clients connectés comme le journal. Le fichier commun garde aussi le
+catalogue des statistiques (catégories et noms, dans la langue du jeu, `statCatalog`), qui permet au site
+Polypode Histoire de les afficher dans son onglet **Stats**.
 
 ### Taille du journal et export
 
@@ -251,6 +253,7 @@ other language).*
 
 ## Version
 
+`1.26.0` : catalogue des statistiques (catégories, noms) écrit avec les relevés, pour l'onglet **Stats** du site Polypode Histoire.
 `1.25.0` : vue **Stats** aussi sur **Retail** (onglet Statistiques des hauts faits) : chiffres groupés lus, montants en pièces d'or (détail en infobulle), statistiques en texte affichées sans courbe ; relevé reporté en combat.
 `1.24.0` : vue **Stats** (WoW Forever) : statistiques de tous les personnages relevées chaque jour, une colonne par personnage, progression sur 7 jours, recherche ; au survol, graphique de l'évolution avec une courbe par personnage à la couleur de sa classe.
 `1.23.0` : avec Polypode 2.29, la fenêtre peut aussi prendre la place de la **fenêtre unique** (option « Placement des fenêtres » de Polypode).

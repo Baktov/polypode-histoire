@@ -462,7 +462,33 @@ local function OnLogin()
 	C_Timer.After(LOGIN_DELAY, Snapshot)
 end
 
+-- Catalogue pour le site Histoire (1.26.0), qui n'a pas accès au client : catégories dans l'ordre du
+-- jeu, « id~parent~ids des statistiques séparés par des virgules~nom » (parent -1 = racine), et nom de
+-- chaque statistique, dans la langue du client (locale). nil si l'API manque.
+local function Catalog()
+	local cats = Categories()
+	if not cats then
+		return nil
+	end
+	local function Clean(text)
+		return (tostring(text or ""):gsub("[~|\r\n]", " "))
+	end
+	local c, n = {}, {}
+	for _, node in ipairs(cats.ordered) do
+		c[#c + 1] = node.id .. "~" .. (tonumber(node.parent) or -1) .. "~" .. table.concat(node.stats, ",") .. "~"
+			.. Clean(node.name)
+		for _, id in ipairs(node.stats) do
+			local name = GetAchievementInfo and select(2, GetAchievementInfo(id))
+			if name then
+				n[id] = Clean(name)
+			end
+		end
+	end
+	return { locale = GetLocale and GetLocale() or nil, c = c, n = n }
+end
+
 local function Save()
+	PolypodeHistoireData.statCatalog = Catalog() or PolypodeHistoireData.statCatalog
 	local all = {}
 	for key, entry in pairs(data) do
 		if HasData(entry) then
